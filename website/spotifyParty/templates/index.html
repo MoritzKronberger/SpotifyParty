@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SpotifyParty</title>
+</head>
+<body>
+    <h1>Welcome to SpotifyParty</h1>
+    <br>
+    <p>Join a party:</p>
+    <form action="" method="post">
+        {% csrf_token %}
+        <p><input type="text", name="session_code"></p>
+        <p><input type="submit"></p>
+    </form>
+    <p>{{ error_msg }}</p>
+    <br>
+    <p>Or create your own Party:</p>
+    <p><a href="{% url 'settings' %}">Create Party</a></p>
+</body>
+</html>
