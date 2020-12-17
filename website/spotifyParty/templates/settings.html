@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SessionSettings</title>
+</head>
+<body>
+    <h1>Settings</h1>
+    <p>{{ error_msg }}</p>
+    <p>Please choose the settings for your Party:</p>
+    <form action="" method="post">
+        {% csrf_token %}
+        <p><input type="submit"></p>
+    </form>
+</body>
+</html>
