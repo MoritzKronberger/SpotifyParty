@@ -3,6 +3,27 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 import uuid
 
 
+class PartySession(models.Model):
+    session_code = models.CharField(max_length=6)
+
+
+class UserPlaylist(models.Model):
+    playlist_name = models.CharField(max_length=100)
+    is_selected = models.BooleanField(default=False)
+    party_session = models.ForeignKey(PartySession, on_delete=models.CASCADE)
+
+
+class Song(models.Model):
+    spotify_song_id = models.CharField(max_length=50)
+    song_name = models.CharField(max_length=150)
+    song_artist = models.CharField(max_length=100)
+    song_length = models.IntegerField()
+    is_playing = models.BooleanField(default=False)
+    is_votable = models.BooleanField(default=False)
+    song_votes = models.IntegerField(default=0)
+    user_playlist = models.ForeignKey(UserPlaylist, on_delete=models.CASCADE)
+
+
 class UserManager(BaseUserManager):
     def create_user(self):
         user_obj = self.model(identifier=uuid.uuid4())
