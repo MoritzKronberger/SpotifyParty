@@ -1,14 +1,11 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
-import random
-import string
+import uuid
 
 
 class UserManager(BaseUserManager):
     def create_user(self):
-        letters = string.ascii_lowercase
-        result_str = ''.join(random.choice(letters) for i in range(25))
-        user_obj = self.model(identifier=result_str)
+        user_obj = self.model(identifier=uuid.uuid4())
         user_obj.password = None
         user_obj.save(using=self._db)
         return user_obj
@@ -41,10 +38,8 @@ class User(AbstractBaseUser):
     def __str__(self):
         return self.identifier
 
-    # dumb shit a User needs to be an admin
     def has_perm(self, perm, obj=None):
         return True
 
-    # more dumb shit a User needs to be an admin
     def has_module_perms(self, app_label):
         return True
