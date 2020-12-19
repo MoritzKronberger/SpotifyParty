@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.conf import settings
+from django.db.models import UniqueConstraint
 import uuid
 
 
@@ -22,6 +24,14 @@ class Song(models.Model):
     is_votable = models.BooleanField(default=False)
     song_votes = models.IntegerField(default=0)
     user_playlist = models.ForeignKey(UserPlaylist, on_delete=models.CASCADE)
+
+
+class UserJoinedPartySession(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    party_session = models.ForeignKey(PartySession, on_delete=models.CASCADE)
+    user_vote = models.ForeignKey(Song, on_delete=models.CASCADE, null=True, default=None)
+    is_session_host = models.BooleanField(default=False)
+    UniqueConstraint(fields=['user', 'party_session'], name='unique_user_partySession')
 
 
 class UserManager(BaseUserManager):
