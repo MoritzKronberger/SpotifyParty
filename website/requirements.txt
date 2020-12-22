@@ -26,12 +26,12 @@ routing==0.2.0
 service-identity==18.1.0
 six==1.15.0
 sqlparse==0.4.1
-Twisted @ /spotifyParty/Twisted-20.3.0-cp39-cp39-win_amd64.whl
 txaio==20.4.1
 zope.interface==5.2.0
 
-# Websocket setup
-# 1. Install Twisted.whl manually
-# 2. Install channels
-# 3. Install channels-redis and command: $ docker run -p 6379:6379 -d redis:5
-# Most of the listed libs are installed by channels
+# In case of error with channels:
+# some systems might require a manual install of /website/Twisted-20.3.0-cp39-cp39-win_amd64.whl, afterwards try installing requirements.txt again
+
+# In case of error with channels-redis:
+# although the error message might link to visual-studio-build-tools-2015, visual-studio-build-tools-2019 are required
+# install from https://visualstudio.microsoft.com/de/downloads/ (under tools for visual studio 2019 -> build tools) and try installing requirements.txt again
