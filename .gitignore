@@ -1,3 +1,4 @@
 /venv/
 /.idea/
 /website/db.sqlite3
+/website/spotifyParty/migrations/
