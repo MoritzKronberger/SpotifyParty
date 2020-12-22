@@ -5,21 +5,23 @@ from channels.consumer import AsyncConsumer
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 from channels.auth import login
+from .models import User, PartySession, UserJoinedPartySession
 
 
 class ChatConsumer(AsyncConsumer):
     async def websocket_connect(self, event):
 
         # @Moritz authentication here
-        # get user from model
-        # await login(self.scope, user)
+        self.user = self.scope["user"]
+        self.room_name = self.scope['url_route']['kwargs']['room_name']
 
         print("connected", event)
-        self.room_name = self.scope['url_route']['kwargs']['room_name']
+
         print("Current room name: " + self.room_name)
         self.room_group_name = 'mytest_%s' % self.room_name
         print("Current group name: " + self.room_group_name)
-
+        self.user_id = await self.get_user_id()
+        print('User-ID: ' + self.user_id)
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
@@ -93,6 +95,19 @@ class ChatConsumer(AsyncConsumer):
 
     async def websocket_disconnect(self, event):
         print("disconnected", event)
+
+    @database_sync_to_async
+    def login_user(self, user):
+        if not user.is_authenticated:
+            new_user = User.objects.create_user()
+            new_user.save()
+            return new_user
+        else:
+            return user
+
+    @database_sync_to_async
+    def get_user_id(self):
+        return self.user.identifier
 
     @database_sync_to_async
     def add_vote_to_database(self, button_id, vote_value, user):

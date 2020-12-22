@@ -55,6 +55,13 @@ def settings(request):
 def party_session(request, room_name):
     valid_session_code = PartySession.objects.filter(session_code=room_name)
     if valid_session_code:
+        if not request.user.is_authenticated:
+            new_user = User.objects.create_user()
+            new_user.save()
+            login(request, new_user)
+
+        new_user_joined_session = UserJoinedPartySession(user=request.user, party_session=valid_session_code[0])
+        new_user_joined_session.save()
         # connects to websocket if matching session exists
         return render(request, 'room.html', {
             'room_name': room_name
