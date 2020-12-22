@@ -1,18 +1,16 @@
 import string, random
 from django.shortcuts import render
-
-from .models import PartySession, UserPlaylist, Song
+from django.http import HttpResponseRedirect
+from django.contrib.auth import login
+from django.urls import reverse
+from .models import PartySession, UserPlaylist, Song, UserJoinedPartySession, User
 
 
 def index(request):
     if request.method == 'POST':
         submitted_session_code = request.POST.get('session_code')
-        active_party_session = PartySession.objects.filter(session_code=submitted_session_code)
-        if active_party_session:
-            # routes back to index with message, should redirect to party_session once live sessions are implemented
-            return render(request, 'index.html', {
-                'error_msg': 'Your PartySession was found in the database. Unfortunately live Sessions are not yet implemented'})
-        return render(request, 'index.html', {'error_msg': 'Sorry, no matching PartySession was found.'})
+        # redirects to view for the joined party_session
+        return HttpResponseRedirect(reverse('party_session', kwargs={'room_name': submitted_session_code}))
     return render(request, 'index.html', {'error_msg': ''})
 
 
@@ -38,24 +36,29 @@ def settings(request):
             new_song1.save()
             new_song2.save()
 
-        # routes back to settings with message, should redirect to party_session once live sessions are implemented
-        return render(request, 'settings.html',
-                      {'error_msg': 'Your Session was created with hardcoded data. Live rooms are not implemented yet'})
+        if not request.user.is_authenticated:
+            new_host_user = User.objects.create_user()
+            new_host_user.save()
+            login(request, new_host_user)
+
+        new_user_joined_session = UserJoinedPartySession(user=request.user, party_session=new_party_session,
+                                                         is_session_host=True)
+        new_user_joined_session.save()
+
+        # redirects to view for the created party_session
+        return HttpResponseRedirect(reverse('party_session', kwargs={'room_name': random_session_code}))
+
     return render(request, 'settings.html', {'error_msg': ''})
 
 
-# view to be implemented with DjangoChannels
-def party_session(request):
-    pass
-
-
-# index for websocket prototype, to be removed after checkouts
-def index_prototype(request):
-    return render(request, "lobby.html")
-
-
-# websocket room
-def room(request, room_name):
-    return render(request, 'room.html', {
-        'room_name': room_name
-    })
+# delivers connection to websocket
+def party_session(request, room_name):
+    valid_session_code = PartySession.objects.filter(session_code=room_name)
+    if valid_session_code:
+        # connects to websocket if matching session exists
+        return render(request, 'room.html', {
+            'room_name': room_name
+        })
+    else:
+        # redirects back to index if no matching session exists
+        return HttpResponseRedirect(reverse('index'))
