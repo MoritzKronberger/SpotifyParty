@@ -25,7 +25,7 @@ SECRET_KEY = '_lighv-gw_tyxu4!cr&vg^!3_49lx)g_-^iq!&^@*sk6!1_a&('
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'spotifyParty',
+    'channels'
 ]
 
 AUTH_USER_MODEL = 'spotifyParty.User'
@@ -71,6 +72,16 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'website.wsgi.application'
+ASGI_APPLICATION = 'website.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
 
 
 # Database

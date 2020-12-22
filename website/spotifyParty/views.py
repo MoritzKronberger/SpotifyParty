@@ -10,7 +10,8 @@ def index(request):
         active_party_session = PartySession.objects.filter(session_code=submitted_session_code)
         if active_party_session:
             # routes back to index with message, should redirect to party_session once live sessions are implemented
-            return render(request, 'index.html', {'error_msg': 'Your PartySession was found in the database. Unfortunately live Sessions are not yet implemented'})
+            return render(request, 'index.html', {
+                'error_msg': 'Your PartySession was found in the database. Unfortunately live Sessions are not yet implemented'})
         return render(request, 'index.html', {'error_msg': 'Sorry, no matching PartySession was found.'})
     return render(request, 'index.html', {'error_msg': ''})
 
@@ -30,18 +31,31 @@ def settings(request):
         new_playlist2.save()
         for i in range(16):
             random_spotify_id = ''.join(random.choice(characters) for i in range(60))
-            new_song1 = Song(spotify_song_id=random_spotify_id, song_name='song'+str(i), song_artist='Example Artist',
+            new_song1 = Song(spotify_song_id=random_spotify_id, song_name='song' + str(i), song_artist='Example Artist',
                              song_length=180, user_playlist=new_playlist1)
-            new_song2 = Song(spotify_song_id=random_spotify_id, song_name='song'+str(i), song_artist='Example Artist',
+            new_song2 = Song(spotify_song_id=random_spotify_id, song_name='song' + str(i), song_artist='Example Artist',
                              song_length=180, user_playlist=new_playlist2)
             new_song1.save()
             new_song2.save()
 
         # routes back to settings with message, should redirect to party_session once live sessions are implemented
-        return render(request, 'settings.html', {'error_msg': 'Your Session was created with hardcoded data. Live rooms are not implemented yet'})
+        return render(request, 'settings.html',
+                      {'error_msg': 'Your Session was created with hardcoded data. Live rooms are not implemented yet'})
     return render(request, 'settings.html', {'error_msg': ''})
 
 
 # view to be implemented with DjangoChannels
 def party_session(request):
     pass
+
+
+# index for websocket prototype, to be removed after checkouts
+def index_prototype(request):
+    return render(request, "lobby.html")
+
+
+# websocket room
+def room(request, room_name):
+    return render(request, 'room.html', {
+        'room_name': room_name
+    })
