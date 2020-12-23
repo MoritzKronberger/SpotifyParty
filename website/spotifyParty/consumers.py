@@ -17,6 +17,8 @@ class ChatConsumer(AsyncConsumer):
 
         print("connected", event)
 
+        await self.user_join_party_session(self.user, await self.get_current_party_session(self.room_name))
+
         print("Current room name: " + self.room_name)
         self.room_group_name = 'mytest_%s' % self.room_name
         print("Current group name: " + self.room_group_name)
@@ -94,16 +96,23 @@ class ChatConsumer(AsyncConsumer):
         })
 
     async def websocket_disconnect(self, event):
-        print("disconnected", event)
+        await self.user_leave_party_session(self.user, await self.get_current_party_session(self.room_name))
+        print("disconnected User: " + self.user_id, event)
 
     @database_sync_to_async
-    def login_user(self, user):
-        if not user.is_authenticated:
-            new_user = User.objects.create_user()
-            new_user.save()
-            return new_user
-        else:
-            return user
+    def user_join_party_session(self, user, party_session):
+        if not UserJoinedPartySession.objects.filter(user=user, party_session=party_session):
+            new_user_joined_party_session = UserJoinedPartySession(user=user, party_session=party_session)
+            new_user_joined_party_session.save()
+
+    @database_sync_to_async
+    def user_leave_party_session(self, user, party_session):
+        UserJoinedPartySession.objects.filter(user=user, party_session=party_session).delete()
+
+    @database_sync_to_async
+    def get_current_party_session(self, current_session_code):
+        current_party_session = PartySession.objects.filter(session_code=current_session_code)[0]
+        return current_party_session
 
     @database_sync_to_async
     def get_user_id(self):

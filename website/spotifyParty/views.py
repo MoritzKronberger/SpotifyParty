@@ -60,8 +60,6 @@ def party_session(request, room_name):
             new_user.save()
             login(request, new_user)
 
-        new_user_joined_session = UserJoinedPartySession(user=request.user, party_session=valid_session_code[0])
-        new_user_joined_session.save()
         # connects to websocket if matching session exists
         return render(request, 'room.html', {
             'room_name': room_name
