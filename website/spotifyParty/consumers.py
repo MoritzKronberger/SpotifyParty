@@ -24,6 +24,7 @@ class ChatConsumer(AsyncConsumer):
         print("Current group name: " + self.room_group_name)
         self.user_id = await self.get_user_id()
         print('User-ID: ' + self.user_id)
+
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
@@ -37,7 +38,7 @@ class ChatConsumer(AsyncConsumer):
             "text": "Connected to group: " + self.room_group_name
         })
 
-    # receiving client messages here
+    # differentiate client messages here
     async def websocket_receive(self, event):
         if str(event.get('text')) == 'Timer':
             asyncio.create_task(self.timer_task())
@@ -120,9 +121,33 @@ class ChatConsumer(AsyncConsumer):
             "text": event['text']
         })
 
+    async def force_disconnect(self, event):
+        await self.send({
+            "type": "websocket.close"
+        })
+
     async def websocket_disconnect(self, event):
-        await self.user_leave_party_session(self.user, await self.get_current_party_session(self.room_name))
-        print("disconnected User: " + self.user_id, event)
+        # close websocket for all users in session and delete session model CASCADE
+        if await self.get_current_party_session(self.room_name) and await self.user_is_session_host(self.user, await self.get_current_party_session(self.room_name)):
+            print("disconnected Host-User: " + self.user_id + "disconnecting all users and deleting session", event)
+            await self.delete_current_session(await self.get_current_party_session(self.room_name))
+            await self.channel_layer.group_send(
+                self.room_group_name, {
+                    "type": "force_disconnect"
+                }
+            )
+            await self.channel_layer.group_discard(
+                self.room_group_name,
+                self.channel_name
+            )
+        else:
+            await self.channel_layer.group_discard(
+                self.room_group_name,
+                self.channel_name
+            )
+            if await self.get_current_party_session(self.room_name):
+                await self.user_leave_party_session(self.user, await self.get_current_party_session(self.room_name))
+            print("disconnected User: " + self.user_id, event)
 
     @database_sync_to_async
     def user_join_party_session(self, user, party_session):
@@ -136,8 +161,11 @@ class ChatConsumer(AsyncConsumer):
 
     @database_sync_to_async
     def get_current_party_session(self, current_session_code):
-        current_party_session = PartySession.objects.filter(session_code=current_session_code)[0]
-        return current_party_session
+        if PartySession.objects.filter(session_code=current_session_code).exists():
+            current_party_session = PartySession.objects.filter(session_code=current_session_code)[0]
+            return current_party_session
+        else:
+            return False
 
     @database_sync_to_async
     def get_user_id(self):
@@ -178,6 +206,11 @@ class ChatConsumer(AsyncConsumer):
     def get_user_playlist(self, party_session):
         user_playlist = UserPlaylist.objects.filter(is_selected=True, party_session=party_session)[0]
         return user_playlist
+
+    @database_sync_to_async
+    def delete_current_session(self, party_session):
+        current_session = party_session
+        current_session.delete()
 
     @database_sync_to_async
     def add_vote_to_database(self, button_id, vote_value, user):
