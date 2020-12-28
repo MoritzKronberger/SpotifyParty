@@ -44,8 +44,6 @@ class ChatConsumer(AsyncConsumer):
             asyncio.create_task(self.timer_task())
         elif str(event.get('text')) == 'start_party_session' and await self.user_is_session_host(self.user, await self.get_current_party_session(self.room_name)):
             asyncio.create_task(self.init_session_task())
-        elif 'button' in str(event.get('text')):
-            asyncio.create_task(self.voting_task(event))
         else:
             asyncio.create_task(self.new_vote_task(event))
 
@@ -125,56 +123,6 @@ class ChatConsumer(AsyncConsumer):
             }
         )
 
-    async def voting_task(self, event):
-        raw_json = event.get("text")
-        data_json = json.loads(raw_json)
-        vote_value = int(data_json["button_val"]) + 1
-        button_id = data_json["button"]
-        print(f'{button_id} and {vote_value}')
-        # @Moritz sending button_id, value and user here
-        user = "test"
-        await self.add_vote_to_database(button_id, vote_value, user)
-
-        # Updating json with new vote_value
-        data_json["button_val"] = str(vote_value)
-        send_to_js = str(data_json).replace("'", '"')
-        await self.channel_layer.group_send(
-            self.room_group_name, {
-                "type": "voting_count",
-                "text": send_to_js
-            }
-        )
-
-    # wrapper functions for websocket send
-    async def voting_count(self, event):
-        await self.send({
-            "type": "websocket.send",
-            "text": event['text']
-        })
-
-    async def session_init(self, event):
-        await self.send({
-            "type": "websocket.send",
-            "text": event['text']
-        })
-
-    async def votes_refresh(self, event):
-        await self.send({
-            "type": "websocket.send",
-            "text": event['text']
-        })
-
-    async def voting_timer(self, event):
-        await self.send({
-            "type": "websocket.send",
-            "text": event['text']
-        })
-
-    async def force_disconnect(self, event):
-        await self.send({
-            "type": "websocket.close"
-        })
-
     async def websocket_disconnect(self, event):
         # close websocket for all users in session and delete session model CASCADE
         if await self.get_current_party_session(self.room_name) and await self.user_is_session_host(self.user, await self.get_current_party_session(self.room_name)):
@@ -197,6 +145,30 @@ class ChatConsumer(AsyncConsumer):
             if await self.get_current_party_session(self.room_name):
                 await self.user_leave_party_session(self.user, await self.get_current_party_session(self.room_name))
             print("disconnected User: " + self.user_id, event)
+
+    # wrapper functions for websocket send
+    async def session_init(self, event):
+        await self.send({
+            "type": "websocket.send",
+            "text": event['text']
+        })
+
+    async def votes_refresh(self, event):
+        await self.send({
+            "type": "websocket.send",
+            "text": event['text']
+        })
+
+    async def voting_timer(self, event):
+        await self.send({
+            "type": "websocket.send",
+            "text": event['text']
+        })
+
+    async def force_disconnect(self, event):
+        await self.send({
+            "type": "websocket.close"
+        })
 
     @database_sync_to_async
     def get_user_join_party_session(self, user, party_session):

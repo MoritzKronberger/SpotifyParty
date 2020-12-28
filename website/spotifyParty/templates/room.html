@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>Shared Playlist</title>
+    <style>
+        .votable_song{
+            background-color: #00993d;
+        }
+    </style>
 </head>
 <body>
 <h1>Websocket Test Env</h1>
@@ -20,13 +25,6 @@
 <br>
 <div id="votable_songs"></div>
 
-<form id="votesysten" method="post">
-    <button id="1" type="submit" onclick= "reply_click(this.id, this.innerText)">0</button>
-    <button id="2" type="submit" onclick= "reply_click(this.id, this.innerText)">0</button>
-    <button id="3" type="submit" onclick= "reply_click(this.id, this.innerText)">0</button>
-    <button id="4" type="submit" onclick= "reply_click(this.id, this.innerText)">0</button>
-</form>
-
 {% block script %}
 <script>
 
@@ -38,20 +36,10 @@ let votable_song_card = document.getElementById("votable_songs");
 // var section for button
 var loc = window.location;
 var formData = document.getElementById("form");
-var voteSystem = document.getElementById('votesysten');
-var btn_list = document.getElementsByTagName("Button");
-var button_id;
-var button_val;
-let stop_the_count = false;
+
 // var section for timer
 let timer = document.getElementById("timer");
     timer.style.display = "block";
-
-// Receiving ID and value of the clicked button
-function reply_click(clicked_id, clicked_val) {
-     button_id = clicked_id;
-     button_val =  clicked_val;
-}
 
 // Websocket routing
 var wsStart = 'ws://';
@@ -136,33 +124,6 @@ socket.onmessage = function(e)
             voteCounter[0].innerText = "Votes: " + String(song["votes"]);
         });
     }
-
-    else if(e.data.includes("button")) {
-        const from_json = JSON.parse(e.data);
-        console.log(from_json);
-        const update_btn = from_json["button"]
-        const update_val = from_json["button_val"]
-        document.getElementById(update_btn).innerText = update_val
-        console.log(update_btn + " " + update_btn)
-    }
-
-    // Data of type timer
-    else {
-        <!-- Reset timer and votes -->
-        if(e.data === '0') {
-            stop_the_count = false
-            document.getElementById("timer").innerText = "Round complete. Starting new voting.";
-            let i;
-            for(i = 0; i < btn_list.length; i++)
-            {
-                btn_list[i].innerText = 0;
-            }
-            stop_the_count = false;
-        }
-        else { <!-- Update timer -->
-           document.getElementById("timer").innerText = "Timer on: " + e.data
-        }
-    }
 }
 
 // Sending Data to Python
@@ -176,19 +137,6 @@ socket.onopen = function(e)
          <!-- Triggering new countdown -->
         socket.send("start_party_session")
     });
-
-     <!-- Sending Data of type button -->
-    voteSystem.addEventListener("submit", function (event)
-    {
-        event.preventDefault();
-        if(stop_the_count === false) {
-            <!-- check if user has voted -->
-            stop_the_count = true
-            socket.send(JSON.stringify({
-                'button': button_id, button_val
-            }));
-        }
-    })
 }
 
 socket.onerror = function(e)
