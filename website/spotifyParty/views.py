@@ -23,7 +23,7 @@ def settings(request):
         new_party_session.save()
 
         # playlists and songs hardcoded, should be provided by SpotifyAPI
-        new_playlist1 = UserPlaylist(playlist_name='playlist 1', party_session=new_party_session)
+        new_playlist1 = UserPlaylist(playlist_name='playlist 1', party_session=new_party_session, is_selected=True)
         new_playlist2 = UserPlaylist(playlist_name='playlist 2', party_session=new_party_session)
         new_playlist1.save()
         new_playlist2.save()
@@ -33,6 +33,13 @@ def settings(request):
                              song_length=180, user_playlist=new_playlist1)
             new_song2 = Song(spotify_song_id=random_spotify_id, song_name='song' + str(i), song_artist='Example Artist',
                              song_length=180, user_playlist=new_playlist2)
+
+            # hardcoded playing and votable songs
+            if i == 2:
+                new_song1.is_playing = True
+            elif 2 < i < 7:
+                new_song1.is_votable = True
+
             new_song1.save()
             new_song2.save()
 
