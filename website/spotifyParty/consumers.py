@@ -17,6 +17,7 @@ class ChatConsumer(AsyncConsumer):
 
         print("connected", event)
 
+        # create user_join_party_session object if not exists
         await self.user_join_party_session(self.user, await self.get_current_party_session(self.room_name))
 
         print("Current room name: " + self.room_name)
@@ -42,11 +43,13 @@ class ChatConsumer(AsyncConsumer):
     async def websocket_receive(self, event):
         if str(event.get('text')) == 'Timer':
             asyncio.create_task(self.timer_task())
+            # check if message is a session_init and if the messaging user is the session-host
         elif str(event.get('text')) == 'start_party_session' and await self.user_is_session_host(self.user, await self.get_current_party_session(self.room_name)):
             asyncio.create_task(self.init_session_task())
         else:
             asyncio.create_task(self.new_vote_task(event))
 
+    # will probably be implemented differently
     async def timer_task(self):
         countdown = 5
         while True:
@@ -65,16 +68,20 @@ class ChatConsumer(AsyncConsumer):
                 break
             await asyncio.sleep(1)
 
+    # starts session and voting on session-hosts command
     async def init_session_task(self):
+        # get songs selected for playing and voting from database as dictionaries
         playing_song = await self.get_playing_song(await self.get_user_playlist(await self.get_current_party_session(self.room_name)))
         votable_songs = await self.get_votable_songs(await self.get_user_playlist(await self.get_current_party_session(self.room_name)))
 
+        # create JSON-like dictionary with data from above
         init_data = {
             "type": "session_init",
             "playing_song": playing_song,
             "votable_songs": votable_songs
         }
 
+        # echo above dictionary in JSON syntax to whole session
         await self.channel_layer.group_send(
             self.room_group_name, {
                 "type": "session_init",
@@ -82,33 +89,44 @@ class ChatConsumer(AsyncConsumer):
             }
         )
 
+    # processes any messages not caught in websocket_receive, ideally valid spotify_song_ids for votes
     async def new_vote_task(self, event):
         self.new_vote = str(event.get("text"))
 
+        # get user's previous user_vote_id from database
         prev_vote_id = await self.get_current_user_vote(await self.get_user_join_party_session(self.user, await self.get_current_party_session(self.room_name)))
         print("vote for " + self.new_vote + "; previous vote was: " + str(prev_vote_id))
 
+        # check if message text corresponds to spotify_song_id of song in this session (returns False if not)
         voted_song = await self.get_song_by_spotify_id(self.new_vote, await self.get_user_playlist(await self.get_current_party_session(self.room_name)))
 
+        # if user has voted previously save voted song as prev_voted_song, else set to None
         if prev_vote_id:
             prev_voted_song = await self.get_song_by_spotify_id(prev_vote_id, await self.get_user_playlist(await self.get_current_party_session(self.room_name)))
         else:
             prev_voted_song = None
 
+        # check if message is valid song and votable
         if voted_song and await self.check_song_votable(voted_song):
+            # check that new vote is different from previous one
             if voted_song != prev_voted_song:
+                # change user_vote in user_joined_session and add +1 to song's vote count
                 await self.set_user_vote(voted_song, await self.get_user_join_party_session(self.user, await self.get_current_party_session(self.room_name)))
                 await self.change_song_votes(voted_song, 1)
+                # if user voted previously add -1 to previous song's vote count
                 if prev_voted_song:
                     await self.change_song_votes(prev_voted_song, -1)
-
+                # create task to echo new vote count
                 asyncio.create_task(self.refresh_votes_task())
             else:
                 print("song already voted for")
         else:
             print("song not votable or doesn't exist")
 
+    # echoes new vote count to whole session
     async def refresh_votes_task(self):
+        # works similar to session_init, but leaves out playing song
+
         votable_songs = await self.get_votable_songs(await self.get_user_playlist(await self.get_current_party_session(self.room_name)))
 
         refresh_data = {
@@ -124,7 +142,7 @@ class ChatConsumer(AsyncConsumer):
         )
 
     async def websocket_disconnect(self, event):
-        # close websocket for all users in session and delete session model CASCADE
+        # close websocket for all users in session and delete session model cascading, if session-host disconnects
         if await self.get_current_party_session(self.room_name) and await self.user_is_session_host(self.user, await self.get_current_party_session(self.room_name)):
             print("disconnected Host-User: " + self.user_id + "disconnecting all users and deleting session", event)
             await self.delete_current_session(await self.get_current_party_session(self.room_name))
@@ -137,6 +155,7 @@ class ChatConsumer(AsyncConsumer):
                 self.room_group_name,
                 self.channel_name
             )
+        # only delete user_joined_party_session instance if non-host-user disconnects
         else:
             await self.channel_layer.group_discard(
                 self.room_group_name,
@@ -170,6 +189,7 @@ class ChatConsumer(AsyncConsumer):
             "type": "websocket.close"
         })
 
+    # functions with database_sync_to_async-decorator to access database for basic queries
     @database_sync_to_async
     def get_user_join_party_session(self, user, party_session):
         return UserJoinedPartySession.objects.filter(user=user, party_session=party_session)[0]
@@ -265,15 +285,3 @@ class ChatConsumer(AsyncConsumer):
     def change_song_votes(self, selected_song, vote_amount):
         selected_song.song_votes = selected_song.song_votes + vote_amount
         selected_song.save()
-
-    @database_sync_to_async
-    def add_vote_to_database(self, button_id, vote_value, user):
-        pass
-
-    @database_sync_to_async
-    def receive_values_database(self):
-        pass
-
-    @database_sync_to_async
-    def countdown_to_database(self, countdown):
-        pass
