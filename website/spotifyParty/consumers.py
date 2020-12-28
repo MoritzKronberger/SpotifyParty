@@ -46,6 +46,8 @@ class ChatConsumer(AsyncConsumer):
             asyncio.create_task(self.init_session_task())
         elif 'button' in str(event.get('text')):
             asyncio.create_task(self.voting_task(event))
+        else:
+            asyncio.create_task(self.new_vote_task(event))
 
     async def timer_task(self):
         countdown = 5
@@ -82,6 +84,47 @@ class ChatConsumer(AsyncConsumer):
             }
         )
 
+    async def new_vote_task(self, event):
+        self.new_vote = str(event.get("text"))
+
+        prev_vote_id = await self.get_current_user_vote(await self.get_user_join_party_session(self.user, await self.get_current_party_session(self.room_name)))
+        print("vote for " + self.new_vote + "; previous vote was: " + str(prev_vote_id))
+
+        voted_song = await self.get_song_by_spotify_id(self.new_vote, await self.get_user_playlist(await self.get_current_party_session(self.room_name)))
+
+        if prev_vote_id:
+            prev_voted_song = await self.get_song_by_spotify_id(prev_vote_id, await self.get_user_playlist(await self.get_current_party_session(self.room_name)))
+        else:
+            prev_voted_song = None
+
+        if voted_song and await self.check_song_votable(voted_song):
+            if voted_song != prev_voted_song:
+                await self.set_user_vote(voted_song, await self.get_user_join_party_session(self.user, await self.get_current_party_session(self.room_name)))
+                await self.change_song_votes(voted_song, 1)
+                if prev_voted_song:
+                    await self.change_song_votes(prev_voted_song, -1)
+
+                asyncio.create_task(self.refresh_votes_task())
+            else:
+                print("song already voted for")
+        else:
+            print("song not votable or doesn't exist")
+
+    async def refresh_votes_task(self):
+        votable_songs = await self.get_votable_songs(await self.get_user_playlist(await self.get_current_party_session(self.room_name)))
+
+        refresh_data = {
+            "type": "votes_refresh",
+            "votable_songs": votable_songs
+        }
+
+        await self.channel_layer.group_send(
+            self.room_group_name, {
+                "type": "votes_refresh",
+                "text": str(refresh_data).replace("'", '"')
+            }
+        )
+
     async def voting_task(self, event):
         raw_json = event.get("text")
         data_json = json.loads(raw_json)
@@ -110,6 +153,12 @@ class ChatConsumer(AsyncConsumer):
         })
 
     async def session_init(self, event):
+        await self.send({
+            "type": "websocket.send",
+            "text": event['text']
+        })
+
+    async def votes_refresh(self, event):
         await self.send({
             "type": "websocket.send",
             "text": event['text']
@@ -148,6 +197,10 @@ class ChatConsumer(AsyncConsumer):
             if await self.get_current_party_session(self.room_name):
                 await self.user_leave_party_session(self.user, await self.get_current_party_session(self.room_name))
             print("disconnected User: " + self.user_id, event)
+
+    @database_sync_to_async
+    def get_user_join_party_session(self, user, party_session):
+        return UserJoinedPartySession.objects.filter(user=user, party_session=party_session)[0]
 
     @database_sync_to_async
     def user_join_party_session(self, user, party_session):
@@ -203,6 +256,17 @@ class ChatConsumer(AsyncConsumer):
         return votable_songs_arr
 
     @database_sync_to_async
+    def check_song_votable(self, song):
+        return song.is_votable
+
+    @database_sync_to_async
+    def get_song_by_spotify_id(self, spotify_id, current_playlist):
+        if Song.objects.filter(spotify_song_id=spotify_id, user_playlist=current_playlist).exists():
+            return Song.objects.filter(spotify_song_id=spotify_id, user_playlist=current_playlist)[0]
+        else:
+            return False
+
+    @database_sync_to_async
     def get_user_playlist(self, party_session):
         user_playlist = UserPlaylist.objects.filter(is_selected=True, party_session=party_session)[0]
         return user_playlist
@@ -211,6 +275,24 @@ class ChatConsumer(AsyncConsumer):
     def delete_current_session(self, party_session):
         current_session = party_session
         current_session.delete()
+
+    @database_sync_to_async
+    def get_current_user_vote(self, user_in_party_session):
+        if user_in_party_session.user_vote:
+            user_vote_id = user_in_party_session.user_vote.spotify_song_id
+            return user_vote_id
+        else:
+            return None
+
+    @database_sync_to_async
+    def set_user_vote(self, voted_song, user_in_party_session):
+        user_in_party_session.user_vote = voted_song
+        user_in_party_session.save()
+
+    @database_sync_to_async
+    def change_song_votes(self, selected_song, vote_amount):
+        selected_song.song_votes = selected_song.song_votes + vote_amount
+        selected_song.save()
 
     @database_sync_to_async
     def add_vote_to_database(self, button_id, vote_value, user):

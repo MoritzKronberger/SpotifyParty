@@ -35,7 +35,7 @@ console.log(window.location);
 let playing_song_card = document.getElementById("playing_song");
 let votable_song_card = document.getElementById("votable_songs");
 
- <!-- var section for button -->
+// var section for button
 var loc = window.location;
 var formData = document.getElementById("form");
 var voteSystem = document.getElementById('votesysten');
@@ -43,18 +43,17 @@ var btn_list = document.getElementsByTagName("Button");
 var button_id;
 var button_val;
 let stop_the_count = false;
- <!-- var section for timer -->
+// var section for timer
 let timer = document.getElementById("timer");
     timer.style.display = "block";
- <!--  -->
 
- <!-- Receiving ID and value of the clicked button -->
+// Receiving ID and value of the clicked button
 function reply_click(clicked_id, clicked_val) {
      button_id = clicked_id;
      button_val =  clicked_val;
 }
 
- <!-- Websocket routing -->
+// Websocket routing
 var wsStart = 'ws://';
 if(loc.protocol === 'https:') {
     wsStart = 'wss://';
@@ -63,18 +62,22 @@ if(loc.protocol === 'https:') {
 var endpoint = wsStart + loc.host + loc.pathname;//
 var socket = new WebSocket(endpoint);
 
- <!-- Receiving Python Data -->
+// Receiving Python Data
 socket.onmessage = function(e)
 {
     console.log(e);
     console.log(e.data);
+
+    // session is initialized
     if(e.data.includes('session_init')){
         const from_json = JSON.parse(e.data);
         console.log(from_json);
 
+        // get data from json object
         let playing_song = from_json["playing_song"];
         let votable_songs = from_json["votable_songs"];
 
+        // create html elements for now playing song from data
         let pSong_headline = document.createElement("H5");
         pSong_headline.innerText = "Now Playing:"
 
@@ -84,12 +87,14 @@ socket.onmessage = function(e)
         let pSong_length = document.createElement("P");
         pSong_length.innerText = "Length: " + playing_song["length"] + " sek.";
 
+        // append html elements for now playing song to placeholder div
         playing_song_card.appendChild(pSong_headline);
         playing_song_card.appendChild(pSong_name);
         playing_song_card.appendChild(pSong_length);
 
         let brEl = document.createElement("BR");
 
+        // for each votable song in the dataset create div with html elements and EventListener
         votable_songs.forEach(function(song){
             let vSongCard = document.createElement("DIV");
             vSongCard.className = "votable_song";
@@ -98,19 +103,39 @@ socket.onmessage = function(e)
             let vSong_name = document.createElement("P");
             vSong_name.innerText = song["title_and_artist"];
             let vSong_votes = document.createElement("P");
+            vSong_votes.className = "vote_counter"
             vSong_votes.innerText = "Votes: " + String(song["votes"]);
 
-            // create EventLister for Voting here and append
-
+            // append html elements to div
             vSongCard.appendChild(vSong_name);
             vSongCard.appendChild(vSong_votes);
 
+            // add EventListener to send clicked song-id over websocket as vote
+            vSongCard.addEventListener('click', function(event){
+                event.preventDefault();
+                socket.send(String(vSongCard.id))
+            });
+
+            // append divs to placeholder div
             votable_song_card.appendChild(vSongCard);
             votable_song_card.appendChild(brEl);
         });
     }
 
-     <!-- Data of type button -->
+    // votes are refreshed
+    else if(e.data.includes('votes_refresh')) {
+        const from_json = JSON.parse(e.data);
+        console.log(from_json);
+
+        let votable_songs = from_json["votable_songs"];
+
+        // replace old vote count with new values
+        votable_songs.forEach(function(song){
+            let vSongCard = document.getElementById(song["song_id"]);
+            let voteCounter = vSongCard.getElementsByClassName("vote_counter");
+            voteCounter[0].innerText = "Votes: " + String(song["votes"]);
+        });
+    }
 
     else if(e.data.includes("button")) {
         const from_json = JSON.parse(e.data);
@@ -121,7 +146,7 @@ socket.onmessage = function(e)
         console.log(update_btn + " " + update_btn)
     }
 
-    <!-- Data of type timer -->
+    // Data of type timer
     else {
         <!-- Reset timer and votes -->
         if(e.data === '0') {
@@ -140,7 +165,7 @@ socket.onmessage = function(e)
     }
 }
 
- <!-- Sending Data to Python -->
+// Sending Data to Python
 socket.onopen = function(e)
 {
     console.log("open", e);
