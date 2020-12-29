@@ -7,7 +7,8 @@ import uuid
 
 class PartySession(models.Model):
     session_code = models.CharField(max_length=6)
-
+    is_initialized = models.BooleanField(default=False)
+    voting_allowed = models.BooleanField(default=False)
 
 class UserPlaylist(models.Model):
     playlist_name = models.CharField(max_length=100)
@@ -21,6 +22,7 @@ class Song(models.Model):
     song_artist = models.CharField(max_length=100)
     song_length = models.IntegerField()
     is_playing = models.BooleanField(default=False)
+    was_played = models.BooleanField(default=False)
     is_votable = models.BooleanField(default=False)
     song_votes = models.IntegerField(default=0)
     user_playlist = models.ForeignKey(UserPlaylist, on_delete=models.CASCADE)

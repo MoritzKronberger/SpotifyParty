@@ -27,12 +27,12 @@ def settings(request):
         new_playlist2 = UserPlaylist(playlist_name='playlist 2', party_session=new_party_session)
         new_playlist1.save()
         new_playlist2.save()
-        for i in range(16):
+        for i in range(8):
             random_spotify_id = ''.join(random.choice(characters) for i in range(60))
             new_song1 = Song(spotify_song_id=random_spotify_id, song_name='song' + str(i), song_artist='Example Artist',
-                             song_length=180, user_playlist=new_playlist1)
+                             song_length=20, user_playlist=new_playlist1)
             new_song2 = Song(spotify_song_id=random_spotify_id, song_name='song' + str(i), song_artist='Example Artist',
-                             song_length=180, user_playlist=new_playlist2)
+                             song_length=20, user_playlist=new_playlist2)
 
             # hardcoded playing and votable songs
             if i == 2:
