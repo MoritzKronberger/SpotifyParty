@@ -56,25 +56,6 @@ class ChatConsumer(AsyncConsumer):
         elif await self.get_voting_allowed(await self.get_current_party_session(self.room_name)):
             asyncio.create_task(self.new_vote_task(event))
 
-    # will probably be implemented differently
-    async def timer_task(self):
-        countdown = 5
-        while True:
-            countdown -= 1
-            # @Moritz send current countdown to database here
-            await self.countdown_to_database(countdown)
-            await self.channel_layer.group_send(
-                self.room_group_name, {
-                    "type": "voting_timer",
-                    "text": str(countdown)
-                }
-            )
-            if countdown == 0:
-                # @Moritz check voted values in database and reset values
-                await self.receive_values_database()
-                break
-            await asyncio.sleep(1)
-
     async def collect_session_data(self, message_type):
         # get songs selected for playing and voting from database as dictionaries
         playing_song = await self.get_playing_song_dict(await self.get_playing_song(await self.get_user_playlist(await self.get_current_party_session(self.room_name))))
@@ -174,6 +155,7 @@ class ChatConsumer(AsyncConsumer):
         wait_time = await self.get_song_length(playing_song)
         await asyncio.sleep(wait_time)
 
+        # kills task if host has disconnected
         if await self.get_current_party_session(self.room_name):
             # no additional votes should be added during processing, will be re-allowed on session refresh
             await self.set_voting_allowed(await self.get_current_party_session(self.room_name), False)
@@ -234,12 +216,6 @@ class ChatConsumer(AsyncConsumer):
         })
 
     async def votes_refresh(self, event):
-        await self.send({
-            "type": "websocket.send",
-            "text": event['text']
-        })
-
-    async def voting_timer(self, event):
         await self.send({
             "type": "websocket.send",
             "text": event['text']
@@ -380,12 +356,15 @@ class ChatConsumer(AsyncConsumer):
 
     @database_sync_to_async
     def get_most_voted_song(self, votable_songs):
+        # in case of draw in vote_count set first song as song with most votes
         most_voted_song = votable_songs[0]
         most_votes = 0
         for song in votable_songs:
+            # if song has more votes than 0 or other songs set as most_voted_song
             if song.song_votes > most_votes:
                 most_votes = song.song_votes
                 most_voted_song = song
+            # reset is_votable and vote_count for all songs
             song.is_votable = False
             song.song_votes = 0
             song.save()

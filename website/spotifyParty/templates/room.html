@@ -61,53 +61,7 @@ socket.onmessage = function(e)
         const from_json = JSON.parse(e.data);
         console.log(from_json);
 
-        // get data from json object
-        let playing_song = from_json["playing_song"];
-        let votable_songs = from_json["votable_songs"];
-
-        // create html elements for now playing song from data
-        let pSong_headline = document.createElement("H5");
-        pSong_headline.innerText = "Now Playing:"
-
-        let pSong_name = document.createElement("P");
-        pSong_name.innerText = playing_song["title_and_artist"];
-
-        let pSong_length = document.createElement("P");
-        pSong_length.innerText = "Length: " + playing_song["length"] + " sek.";
-
-        // append html elements for now playing song to placeholder div
-        playing_song_card.appendChild(pSong_headline);
-        playing_song_card.appendChild(pSong_name);
-        playing_song_card.appendChild(pSong_length);
-
-        let brEl = document.createElement("BR");
-
-        // for each votable song in the dataset create div with html elements and EventListener
-        votable_songs.forEach(function(song){
-            let vSongCard = document.createElement("DIV");
-            vSongCard.className = "votable_song";
-            vSongCard.id = song["song_id"];
-
-            let vSong_name = document.createElement("P");
-            vSong_name.innerText = song["title_and_artist"];
-            let vSong_votes = document.createElement("P");
-            vSong_votes.className = "vote_counter"
-            vSong_votes.innerText = "Votes: " + String(song["votes"]);
-
-            // append html elements to div
-            vSongCard.appendChild(vSong_name);
-            vSongCard.appendChild(vSong_votes);
-
-            // add EventListener to send clicked song-id over websocket as vote
-            vSongCard.addEventListener('click', function(event){
-                event.preventDefault();
-                socket.send(String(vSongCard.id))
-            });
-
-            // append divs to placeholder div
-            votable_song_card.appendChild(vSongCard);
-            votable_song_card.appendChild(brEl);
-        });
+        fillCards(from_json);
     }
 
     // votes are refreshed
