@@ -387,6 +387,9 @@ class ChatConsumer(AsyncConsumer):
             song.is_votable = False
             song.song_votes = 0
             song.save()
+        # fixes bug where song with 0 votes stays votable
+        most_voted_song.is_votable = False
+        most_voted_song.save()
         return most_voted_song
 
     @database_sync_to_async
