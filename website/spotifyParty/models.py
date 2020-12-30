@@ -10,6 +10,7 @@ class PartySession(models.Model):
     is_initialized = models.BooleanField(default=False)
     voting_allowed = models.BooleanField(default=False)
 
+
 class UserPlaylist(models.Model):
     playlist_name = models.CharField(max_length=100)
     is_selected = models.BooleanField(default=False)

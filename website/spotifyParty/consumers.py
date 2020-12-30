@@ -40,6 +40,11 @@ class ChatConsumer(AsyncConsumer):
             "text": "Connected to group: " + self.room_group_name
         })
 
+        # if the session has already been started the user still needs to receive the playing and votable songs
+        session_is_init = await self.get_session_initialized(await self.get_current_party_session(self.room_name))
+        if session_is_init:
+            asyncio.create_task(self.collect_session_data('user_session_init'))
+
     # differentiate client messages here
     async def websocket_receive(self, event):
         if str(event.get('text')) == 'Timer':
@@ -47,7 +52,8 @@ class ChatConsumer(AsyncConsumer):
             # check if message is a session_init and if the messaging user is the session-host
         elif str(event.get('text')) == 'start_party_session' and await self.user_is_session_host(self.user, await self.get_current_party_session(self.room_name)):
             asyncio.create_task(self.collect_session_data('session_init'))
-        else:
+            # only start voting task if voting is currently allowed
+        elif await self.get_voting_allowed(await self.get_current_party_session(self.room_name)):
             asyncio.create_task(self.new_vote_task(event))
 
     # will probably be implemented differently
@@ -82,14 +88,17 @@ class ChatConsumer(AsyncConsumer):
         }
 
         if message_type == 'session_init':
+            await self.set_session_initialized(await self.get_current_party_session(self.room_name), True)
             asyncio.create_task(self.send_to_session_task(collected_data, message_type))
-            await self.set_session_initialized(await self.get_current_party_session(self.room_name))
         elif message_type == 'session_refresh':
             asyncio.create_task(self.send_to_session_task(collected_data, message_type))
+        elif message_type == 'user_session_init':
+            asyncio.create_task(self.send_to_single_user_task(collected_data, message_type))
 
     # starts session and voting on session-hosts command
     async def send_to_session_task(self, received_data, message_type):
         init_data = received_data
+        await self.set_voting_allowed(await self.get_current_party_session(self.room_name), True)
         # echo above dictionary in JSON syntax to whole session
         await self.channel_layer.group_send(
             self.room_group_name, {
@@ -99,6 +108,13 @@ class ChatConsumer(AsyncConsumer):
         )
         # collect votes after song was played
         asyncio.create_task(self.collect_votes_task())
+
+    async def send_to_single_user_task(self, received_data, message_type):
+        init_data = received_data
+        await self.send({
+            "type": "websocket.send",
+            "text": str(init_data).replace("'", '"')
+        })
 
     # processes any messages not caught in websocket_receive, ideally valid spotify_song_ids for votes
     async def new_vote_task(self, event):
@@ -157,7 +173,8 @@ class ChatConsumer(AsyncConsumer):
         wait_time = await self.get_song_length(playing_song)
         await asyncio.sleep(wait_time)
 
-        # set session.voting_allowed to false here
+        # no additional votes should be added during processing, will be re-allowed on session refresh
+        await self.set_voting_allowed(await self.get_current_party_session(self.room_name), False)
 
         votable_songs = await self.get_votable_songs(await self.get_user_playlist(await self.get_current_party_session(self.room_name)))
 
@@ -255,15 +272,23 @@ class ChatConsumer(AsyncConsumer):
             return False
 
     @database_sync_to_async
-    def set_session_initialized(self, current_session_code):
-        party_session = PartySession.objects.filter(session_code=current_session_code)[0]
-        party_session.is_initialized = True
+    def set_session_initialized(self, party_session, session_status):
+        party_session.is_initialized = session_status
         party_session.save()
 
     @database_sync_to_async
-    def get_session_initialized(self, current_session_code):
-        party_session = PartySession.objects.filter(session_code=current_session_code)[0]
-        return party_session.is_initialized
+    def get_session_initialized(self, party_session):
+        current_party_session = party_session
+        return current_party_session.is_initialized
+
+    @database_sync_to_async
+    def get_voting_allowed(self, party_session):
+        return party_session.voting_allowed
+
+    @database_sync_to_async
+    def set_voting_allowed(self, party_session, voting_allowed):
+        party_session.voting_allowed = voting_allowed
+        party_session.save()
 
     @database_sync_to_async
     def get_user_id(self):
