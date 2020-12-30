@@ -169,30 +169,32 @@ class ChatConsumer(AsyncConsumer):
         )
 
     async def collect_votes_task(self):
+
         playing_song = await self.get_playing_song(await self.get_user_playlist(await self.get_current_party_session(self.room_name)))
         wait_time = await self.get_song_length(playing_song)
         await asyncio.sleep(wait_time)
 
-        # no additional votes should be added during processing, will be re-allowed on session refresh
-        await self.set_voting_allowed(await self.get_current_party_session(self.room_name), False)
+        if await self.get_current_party_session(self.room_name):
+            # no additional votes should be added during processing, will be re-allowed on session refresh
+            await self.set_voting_allowed(await self.get_current_party_session(self.room_name), False)
 
-        votable_songs = await self.get_votable_songs(await self.get_user_playlist(await self.get_current_party_session(self.room_name)))
+            votable_songs = await self.get_votable_songs(await self.get_user_playlist(await self.get_current_party_session(self.room_name)))
 
-        most_voted_song = await self.get_most_voted_song(votable_songs)
+            most_voted_song = await self.get_most_voted_song(votable_songs)
 
-        await self.set_new_playing_song(most_voted_song, playing_song)
+            await self.set_new_playing_song(most_voted_song, playing_song)
 
-        # must be called after the new playing_song is set, to properly exclude it from being eligible for voting
-        # number of new songs hardcoded, could be decided on with user option
-        not_played_songs = await self.get_not_played_songs(await self.get_user_playlist(await self.get_current_party_session(self.room_name)))
-
-        for i in range(4):
-            await self.change_song_votable(random.choice(not_played_songs), True)
-            # variable is set again to exclude the just set song
+            # must be called after the new playing_song is set, to properly exclude it from being eligible for voting
+            # number of new songs hardcoded, could be decided on with user option
             not_played_songs = await self.get_not_played_songs(await self.get_user_playlist(await self.get_current_party_session(self.room_name)))
 
-        # refresh session
-        asyncio.create_task(self.collect_session_data('session_refresh'))
+            for i in range(4):
+                await self.change_song_votable(random.choice(not_played_songs), True)
+                # variable is set again to exclude the just set song
+                not_played_songs = await self.get_not_played_songs(await self.get_user_playlist(await self.get_current_party_session(self.room_name)))
+
+            # refresh session
+            asyncio.create_task(self.collect_session_data('session_refresh'))
 
     async def websocket_disconnect(self, event):
         # close websocket for all users in session and delete session model cascading, if session-host disconnects
