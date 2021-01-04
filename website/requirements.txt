@@ -4,9 +4,11 @@ async-timeout==3.0.1
 attrs==20.3.0
 autobahn==20.12.2
 Automat==20.2.0
+certifi==2020.12.5
 cffi==1.14.4
 channels==3.0.2
 channels-redis==3.2.0
+chardet==4.0.0
 constantly==15.1.0
 cryptography==3.3.1
 daphne==3.0.1
@@ -22,11 +24,15 @@ pycparser==2.20
 PyHamcrest==2.0.2
 pyOpenSSL==20.0.1
 pytz==2020.4
+requests==2.25.1
 routing==0.2.0
 service-identity==18.1.0
 six==1.15.0
+spotipy==2.16.1
 sqlparse==0.4.1
+Twisted @ file:///C:/Users/mk15/PycharmProjects/spotifyParty/Twisted-20.3.0-cp39-cp39-win_amd64.whl
 txaio==20.4.1
+urllib3==1.26.2
 zope.interface==5.2.0
 
 # In case of error with channels:

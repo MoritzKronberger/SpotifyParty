@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>playlists</title>
+</head>
+<body>
+<h1>User playlists:</h1>
+    {% for key, value in playlists.items %}
+    <form action="tracks/" method="post">
+           {% csrf_token %}
+        <ul>
+            <input type="hidden" name="playlist_id" value="{{ value }}">
+            <input type="submit" name="playlist_name" value="{{ key }}">
+        </ul>
+    </form>
+  {% endfor %}
+</body>
+</html>

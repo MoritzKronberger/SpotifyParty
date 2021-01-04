@@ -5,7 +5,16 @@ from django.contrib.auth import login
 from django.urls import reverse
 from .models import PartySession, UserPlaylist, Song, UserJoinedPartySession, User
 
+# spotify imports
+import json
+import time
+from django.http import HttpResponse
+from django.shortcuts import render, redirect
+import spotipy
+from spotipy import SpotifyOAuth
 
+
+# landing page
 def index(request):
     if request.method == 'POST':
         submitted_session_code = request.POST.get('session_code')
@@ -74,3 +83,116 @@ def party_session(request, room_name):
     else:
         # redirects back to index if no matching session exists
         return HttpResponseRedirect(reverse('index'))
+
+
+# ------------------- spotify api section ------------------------------
+
+
+# requests require token_info
+TOKEN_INFO = 'token_info'
+
+
+# spotify user authentication
+def login_spotify(template):
+    # delete old session cookie
+    response = HttpResponse(template)
+    response.delete_cookie('sessionid')
+    # auth for user on scope
+    sp_auth = create_spotify_oauth()
+    # redirect to spotify account login
+    auth_url = sp_auth.get_authorize_url()
+    return redirect(auth_url)
+
+
+def get_playlists(request):
+    token_info = get_token(request)
+    sp = spotipy.Spotify(auth=token_info['access_token'])
+    # receiving playlists
+    raw_playlists = sp.current_user_playlists(limit=10, offset=0)
+    # converting playlists to json
+    playlist_json = json.loads(json.dumps(raw_playlists))
+    # creating dict and appending playlist ids
+    playlist_id = list()
+    for playlist in playlist_json['items']:
+        playlist_id.append(playlist['id'])
+    # creating dict and appending playlist names
+    playlist_name = list()
+    for playlist in playlist_json['items']:
+        playlist_name.append(playlist['name'])
+    # creating dict and appending playlist images
+    playlist_images = list()
+    for playlist in playlist_json['items']:
+        playlist_images.append(playlist['images'][0]['url'])
+    # print(playlist_images)
+    # zipping id, name, images into a new list on next update
+    # Database
+
+    # zipping dict names and ids into one dict
+    dict_name_id = dict(zip(playlist_name, playlist_id))
+    return render(request, 'playlists.html', {'playlists': dict_name_id})
+
+
+def get_playlist_tracks(request):
+    token_info = get_token(request)
+    playlist_id = request.POST['playlist_id']
+    sp = spotipy.Spotify(auth=token_info['access_token'])
+    # receiving tracks from selected playlist
+    raw_tracks = sp.playlist_items(playlist_id, limit=20, offset=0)
+    # converting tracks to json
+    tracks_json = json.loads(json.dumps(raw_tracks))
+    # creating dict and appending tracks
+    display_tracks = list()
+    for tracks in tracks_json['items']:
+        display_tracks.append(tracks['track']['name'])
+    # Database
+
+    # receiving user devices
+    raw_devices = sp.devices()
+    # converting devices to json
+    json_devices = json.loads(json.dumps(raw_devices))
+    return render(request, 'playlist_tracks.html', {'tracks': display_tracks, 'devices': json_devices,
+                                                    "p_id": playlist_id})
+
+
+def play(request):
+    token_info = get_token(request)
+    sp = spotipy.Spotify(auth=token_info['access_token'])
+    device_id = request.POST['device_id']
+    playlist_id = request.POST['p_id']
+    # start playback on selected device and playlist id
+    sp.start_playback(device_id=device_id, context_uri="spotify:playlist:" + playlist_id)
+    return redirect(settings)
+
+
+def get_token(request):
+    token_info = request.session['TOKEN_INFO']
+    # view token info for attributes
+    print(token_info)
+    # create new token if none or expired
+    if TOKEN_INFO is None:
+        raise Exception('exception')
+    now = int(time.time())
+    is_expired = int(token_info['expires_at']) - now < 60
+    if is_expired:
+        spouth = create_spotify_oauth()
+        token_info = spouth.refresh_access_token(token_info['refresh_token'])
+    return token_info
+
+
+def redirect_page(request):
+    # redirect to playlists after valid spotify login
+    request.session.clear()
+    sp_outh = create_spotify_oauth()
+    code = request.GET.get('code')
+    token_info = sp_outh.get_access_token(code)
+    request.session['TOKEN_INFO'] = token_info
+    return redirect(get_playlists)
+
+
+def create_spotify_oauth():
+    return SpotifyOAuth(
+        client_id='bad705349c69482491eb6fc424167330',
+        client_secret='c75baaacada64c7f92a6f06e45b72c29',
+        redirect_uri='http://127.0.0.1:8000/redirect/',
+        scope='user-library-read, user-modify-playback-state, user-read-playback-state'
+    )
