@@ -113,23 +113,18 @@ def get_playlists(request):
     playlist_json = json.loads(json.dumps(raw_playlists))
     # creating dict and appending playlist ids
     playlist_id = list()
-    for playlist in playlist_json['items']:
-        playlist_id.append(playlist['id'])
-    # creating dict and appending playlist names
     playlist_name = list()
-    for playlist in playlist_json['items']:
-        playlist_name.append(playlist['name'])
-    # creating dict and appending playlist images
     playlist_images = list()
     for playlist in playlist_json['items']:
+        playlist_id.append(playlist['id'])
+        playlist_name.append(playlist['name'])
         playlist_images.append(playlist['images'][0]['url'])
-    # print(playlist_images)
-    # zipping id, name, images into a new list on next update
-    # Database
 
-    # zipping dict names and ids into one dict
-    dict_name_id = dict(zip(playlist_name, playlist_id))
-    return render(request, 'playlists.html', {'playlists': dict_name_id})
+    # All items zipped into tuples
+    # Database access here
+    playlist_items = list(zip(playlist_name, playlist_id, playlist_images))
+
+    return render(request, 'playlists.html', {'playlists': playlist_items})
 
 
 def get_playlist_tracks(request):
