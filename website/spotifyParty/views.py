@@ -32,7 +32,7 @@ def settings(request):
         new_party_session.save()
 
         # playlists and songs hardcoded, should be provided by SpotifyAPI
-        new_playlist1 = UserPlaylist(playlist_name='playlist 1', party_session=new_party_session, is_selected=True)
+        '''new_playlist1 = UserPlaylist(playlist_name='playlist 1', party_session=new_party_session, is_selected=True)
         new_playlist2 = UserPlaylist(playlist_name='playlist 2', party_session=new_party_session)
         new_playlist1.save()
         new_playlist2.save()
@@ -50,7 +50,7 @@ def settings(request):
                 new_song1.is_votable = True
 
             new_song1.save()
-            new_song2.save()
+            new_song2.save()'''
 
         if not request.user.is_authenticated:
             new_host_user = User.objects.create_user()
@@ -121,7 +121,8 @@ def get_playlists(request):
         playlist_images.append(playlist['images'][0]['url'])
 
     # All items zipped into tuples
-    # Database access here
+    # save to Database here
+
     playlist_items = list(zip(playlist_name, playlist_id, playlist_images))
 
     return render(request, 'playlists.html', {'playlists': playlist_items})
@@ -139,7 +140,7 @@ def get_playlist_tracks(request):
     display_tracks = list()
     for tracks in tracks_json['items']:
         display_tracks.append(tracks['track']['name'])
-    # Database
+    # save playlists to Database here
 
     # receiving user devices
     raw_devices = sp.devices()
@@ -166,6 +167,8 @@ def get_token(request):
     # create new token if none or expired
     if TOKEN_INFO is None:
         raise Exception('exception')
+    # save token to db here
+
     now = int(time.time())
     is_expired = int(token_info['expires_at']) - now < 60
     if is_expired:

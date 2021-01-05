@@ -12,21 +12,37 @@ class PartySession(models.Model):
 
 
 class UserPlaylist(models.Model):
+    spotify_playlist_id = models.CharField(max_length=250)
     playlist_name = models.CharField(max_length=100)
     is_selected = models.BooleanField(default=False)
     party_session = models.ForeignKey(PartySession, on_delete=models.CASCADE)
 
 
 class Song(models.Model):
-    spotify_song_id = models.CharField(max_length=50)
+    spotify_song_id = models.CharField(max_length=250)
     song_name = models.CharField(max_length=150)
     song_artist = models.CharField(max_length=100)
+    song_cover_link = models.URLField()
     song_length = models.IntegerField()
     is_playing = models.BooleanField(default=False)
     was_played = models.BooleanField(default=False)
     is_votable = models.BooleanField(default=False)
     song_votes = models.IntegerField(default=0)
-    user_playlist = models.ForeignKey(UserPlaylist, on_delete=models.CASCADE)
+    party_session = models.ForeignKey(PartySession, on_delete=models.CASCADE)
+
+
+class PlaybackDevice(models.Model):
+    spotify_device_id = models.CharField(max_length=250)
+    device_name = models.CharField(max_length=150)
+    is_selected = models.BooleanField(default=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+
+class ApiToken(models.Model):
+    token_string = models.CharField(max_length=250)
+    refresh_token_string = models.CharField(max_length=250)
+    expires_at = models.IntegerField()
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
 
 class UserJoinedPartySession(models.Model):

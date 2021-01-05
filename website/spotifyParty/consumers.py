@@ -11,7 +11,7 @@ from .models import User, PartySession, UserJoinedPartySession, Song, UserPlayli
 
 class ChatConsumer(AsyncConsumer):
     async def websocket_connect(self, event):
-
+        pass
         # @Moritz authentication here
         self.user = self.scope["user"]
         self.room_name = self.scope['url_route']['kwargs']['room_name']
