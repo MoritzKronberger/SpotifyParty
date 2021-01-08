@@ -6,6 +6,5 @@ urlpatterns = [
     path('settings', views.settings, name='settings'),
     path('login/', views.login_spotify, name='login_spotify'),
     path('redirect/', views.redirect_page),
-    path('playlists/tracks/play', views.play),
     path('<str:room_name>/', views.party_session, name='party_session')
 ]

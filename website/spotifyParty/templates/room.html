@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <title>Shared Playlist</title>
     <style>
-        .votable_song{
-            background-color: #00993d;
+        #song_cover{
+            width: 20%;
         }
     </style>
 </head>
@@ -97,16 +97,20 @@ function fillCards(from_json){
 
         // create html elements for now playing song from data
         let pSong_headline = document.createElement("H5");
-        pSong_headline.innerText = "Now Playing:"
+        pSong_headline.innerText = "Now Playing:";
 
+        let pSong_cover = document.createElement("IMG");
+        pSong_cover.src = playing_song["cover_link"];
+        pSong_cover.id = "song_cover";
         let pSong_name = document.createElement("P");
         pSong_name.innerText = playing_song["title_and_artist"];
 
         let pSong_length = document.createElement("P");
-        pSong_length.innerText = "Length: " + playing_song["length"] + " sek.";
+        pSong_length.innerText = "Length: " + playing_song["length"] + " ms.";
 
         // append html elements for now playing song to placeholder div
         playing_song_card.appendChild(pSong_headline);
+        playing_song_card.appendChild(pSong_cover);
         playing_song_card.appendChild(pSong_name);
         playing_song_card.appendChild(pSong_length);
 
@@ -118,6 +122,9 @@ function fillCards(from_json){
             vSongCard.className = "votable_song";
             vSongCard.id = song["song_id"];
 
+            let vSong_cover = document.createElement("IMG");
+            vSong_cover.src = song["cover_link"];
+            vSong_cover.id = "song_cover";
             let vSong_name = document.createElement("P");
             vSong_name.innerText = song["title_and_artist"];
             let vSong_votes = document.createElement("P");
@@ -125,6 +132,7 @@ function fillCards(from_json){
             vSong_votes.innerText = "Votes: " + String(song["votes"]);
 
             // append html elements to div
+            vSongCard.appendChild(vSong_cover);
             vSongCard.appendChild(vSong_name);
             vSongCard.appendChild(vSong_votes);
 
