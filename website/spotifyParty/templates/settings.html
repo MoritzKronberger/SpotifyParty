@@ -10,6 +10,19 @@
     <p>Please choose the settings for your Party:</p>
     <form action="" method="post">
         {% csrf_token %}
+         <label for="playlist">Select your playlist:</label>
+          <select id="playlist" name="playlist">
+              {% for playlist in playlists %}
+                <option value={{ playlist.playlist_id }}>{{ playlist.playlist_name }}</option>
+              {% endfor %}
+          </select>
+        <br>
+        <label for="device">Select your playback-device:</label>
+          <select id="device" name="device">
+            {% for device in devices %}
+                <option value={{ device.device_id }}>{{ device.device_name }}</option>
+            {% endfor %}
+          </select>
         <p><input type="submit"></p>
     </form>
 </body>

@@ -28,48 +28,62 @@ def settings(request):
         HttpResponseRedirect(reverse('login_spotify'))
 
     if request.method == 'POST':
-        # create new PartySession
-        characters = string.ascii_lowercase
-        random_session_code = ''.join(random.choice(characters) for i in range(6))
-        new_party_session = PartySession(session_code=random_session_code)
-        new_party_session.save()
+        # get selected device and playlist
+        submitted_playlist_id = request.POST.get('playlist')
+        submitted_device_id = request.POST.get('device')
+        active_playlists = UserPlaylist.objects.filter(spotify_playlist_id=submitted_playlist_id)
+        active_devices = PlaybackDevice.objects.filter(spotify_device_id=submitted_device_id)
 
-        # playlists and songs hardcoded, should be provided by SpotifyAPI
-        '''new_playlist1 = UserPlaylist(playlist_name='playlist 1', party_session=new_party_session, is_selected=True)
-        new_playlist2 = UserPlaylist(playlist_name='playlist 2', party_session=new_party_session)
-        new_playlist1.save()
-        new_playlist2.save()
-        for i in range(8):
-            random_spotify_id = ''.join(random.choice(characters) for i in range(60))
-            new_song1 = Song(spotify_song_id=random_spotify_id, song_name='song' + str(i), song_artist='Example Artist',
-                             song_length=20, user_playlist=new_playlist1)
-            new_song2 = Song(spotify_song_id=random_spotify_id, song_name='song' + str(i), song_artist='Example Artist',
-                             song_length=20, user_playlist=new_playlist2)
+        if active_playlists.exists() and active_devices.exists():
+            active_playlist = active_playlists[0]
+            active_device = active_devices[0]
+            # set selected playlist and device as selected in db
+            active_playlist.is_selected = True
+            active_playlist.save()
+            active_device.is_selected = True
+            active_device.save()
 
-            # hardcoded playing and votable songs
-            if i == 2:
-                new_song1.is_playing = True
-            elif 2 < i < 7:
-                new_song1.is_votable = True
+            # create new PartySession
+            characters = string.ascii_lowercase
+            random_session_code = ''.join(random.choice(characters) for i in range(6))
+            new_party_session = PartySession(session_code=random_session_code)
+            new_party_session.save()
 
-            new_song1.save()
-            new_song2.save()'''
+            # join user and new session as host user
+            new_user_joined_session = UserJoinedPartySession(user=request.user, party_session=new_party_session,
+                                                             is_session_host=True)
+            new_user_joined_session.save()
 
-        if not request.user.is_authenticated:
-            new_host_user = User.objects.create_user()
-            new_host_user.save()
-            login(request, new_host_user)
-
-        new_user_joined_session = UserJoinedPartySession(user=request.user, party_session=new_party_session,
-                                                         is_session_host=True)
-        new_user_joined_session.save()
-
-        # redirects to view for the created party_session
-        return HttpResponseRedirect(reverse('party_session', kwargs={'room_name': random_session_code}))
+            # get songs for current session and save to db
+            fetch_playlist_tracks_from_spotify(request.user, active_playlist.spotify_playlist_id, new_party_session)
+            # redirects to view for the created party_session
+            return HttpResponseRedirect(reverse('party_session', kwargs={'room_name': random_session_code}))
 
     fetch_playlists_from_spotify(request.user)
     fetch_devices_from_spotify(request.user)
-    return render(request, 'settings.html', {'error_msg': ''})
+    user_playlists = UserPlaylist.objects.filter(user=request.user)
+    user_devices = PlaybackDevice.objects.filter(user=request.user)
+
+    playlists = []
+    devices = []
+    for playlist in user_playlists:
+        playlists.append({
+            'playlist_id': playlist.spotify_playlist_id,
+            'playlist_name': playlist.playlist_name
+        })
+
+    for device in user_devices:
+        devices.append({
+            'device_id': device.spotify_device_id,
+            'device_name': device.device_name
+        })
+
+    error_msg = ''
+    if not user_playlists.exists():
+        error_msg = 'Please make sure your playlist is set to public and contains at least 5 songs!'
+    if not user_devices.exists():
+        error_msg = 'Please make sure your playback device is active and accessible!'
+    return render(request, 'settings.html', {'error_msg': error_msg, 'playlists': playlists, 'devices': devices})
 
 
 # delivers connection to websocket
@@ -109,50 +123,7 @@ def login_spotify(template):
     return redirect(auth_url)
 
 
-def get_playlists(request):
-    sp = spotipy.Spotify(auth=get_user_token(request.user))
-    # receiving playlists
-    raw_playlists = sp.current_user_playlists(limit=10, offset=0)
-    # converting playlists to json
-    playlist_json = json.loads(json.dumps(raw_playlists))
-    # creating dict and appending playlist ids
-    playlist_id = list()
-    playlist_name = list()
-    playlist_images = list()
-    for playlist in playlist_json['items']:
-        playlist_id.append(playlist['id'])
-        playlist_name.append(playlist['name'])
-        playlist_images.append(playlist['images'][0]['url'])
-
-    # All items zipped into tuples
-    # save to Database here
-
-    playlist_items = list(zip(playlist_name, playlist_id, playlist_images))
-
-    return render(request, 'playlists.html', {'playlists': playlist_items})
-
-
-def get_playlist_tracks(request):
-    playlist_id = request.POST['playlist_id']
-    sp = spotipy.Spotify(auth=get_user_token(request.user))
-    # receiving tracks from selected playlist
-    raw_tracks = sp.playlist_items(playlist_id, limit=20, offset=0)
-    # converting tracks to json
-    tracks_json = json.loads(json.dumps(raw_tracks))
-    # creating dict and appending tracks
-    display_tracks = list()
-    for tracks in tracks_json['items']:
-        display_tracks.append(tracks['track']['name'])
-    # save playlists to Database here
-
-    # receiving user devices
-    raw_devices = sp.devices()
-    # converting devices to json
-    json_devices = json.loads(json.dumps(raw_devices))
-    return render(request, 'playlist_tracks.html', {'tracks': display_tracks, 'devices': json_devices,
-                                                    "p_id": playlist_id})
-
-
+# gets user playlists from api and saves them to db
 def fetch_playlists_from_spotify(user):
     sp = spotipy.Spotify(auth=get_user_token(user))
     # receiving playlists
@@ -171,6 +142,7 @@ def fetch_playlists_from_spotify(user):
             new_playlist.save()
 
 
+# gets user playlist-tracks from api and saves them to db
 def fetch_playlist_tracks_from_spotify(user, playlist_id, current_session):
     sp = spotipy.Spotify(auth=get_user_token(user))
     # receiving tracks from selected playlist
@@ -191,6 +163,7 @@ def fetch_playlist_tracks_from_spotify(user, playlist_id, current_session):
         new_song.save()
 
 
+# gets user devices from api and saves them to db
 def fetch_devices_from_spotify(user):
     sp = spotipy.Spotify(auth=get_user_token(user))
     # receiving user devices
@@ -260,7 +233,7 @@ def redirect_page(request):
         api_token = ApiToken(access_token=token_info['access_token'], refresh_token=token_info['refresh_token'],
                              expires_at=int(token_info['expires_at']), user=request.user)
         api_token.save()
-    return redirect(get_playlists)
+    return redirect(settings)
 
 
 def create_spotify_oauth():
