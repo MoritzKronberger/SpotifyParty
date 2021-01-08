@@ -14,8 +14,9 @@ class PartySession(models.Model):
 class UserPlaylist(models.Model):
     spotify_playlist_id = models.CharField(max_length=250)
     playlist_name = models.CharField(max_length=100)
+    playlist_cover_link = models.URLField()
     is_selected = models.BooleanField(default=False)
-    party_session = models.ForeignKey(PartySession, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
 
 class Song(models.Model):
@@ -39,8 +40,8 @@ class PlaybackDevice(models.Model):
 
 
 class ApiToken(models.Model):
-    token_string = models.CharField(max_length=250)
-    refresh_token_string = models.CharField(max_length=250)
+    access_token = models.CharField(max_length=250)
+    refresh_token = models.CharField(max_length=250)
     expires_at = models.IntegerField()
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
