@@ -11,7 +11,7 @@ import time
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 import spotipy
-from spotipy import SpotifyOAuth
+from spotipy import SpotifyOAuth, SpotifyException
 
 
 # landing page
@@ -203,34 +203,44 @@ def get_user_token(user):
         is_expired = user_token.expires_at - now < 60
         # check if token is expired
         if is_expired:
-            sp_oauth = create_spotify_oauth()
-            # refresh token if expired
-            token_info = sp_oauth.refresh_access_token(user_token.refresh_token)
-            # save new token and delete expired one
-            api_token = ApiToken(access_token=token_info['access_token'], refresh_token=token_info['refresh_token'],
-                                 expires_at=int(token_info['expires_at']), user=user)
-            api_token.save()
-            user_token.delete()
-            # return refreshed token
-            user_token = ApiToken.objects.filter(user=user)[0]
-            access_token = user_token.access_token
-
+                sp_oauth = create_spotify_oauth()
+                # refresh token if expired
+                token_info = sp_oauth.refresh_access_token(user_token.refresh_token)
+                # save new token and delete expired one
+                api_token = ApiToken(access_token=token_info['access_token'], refresh_token=token_info['refresh_token'],
+                                     expires_at=int(token_info['expires_at']), user=user)
+                api_token.save()
+                user_token.delete()
+                # return refreshed token
+                user_token = ApiToken.objects.filter(user=user)[0]
+                access_token = user_token.access_token
         return access_token
     else:
         return False
 
 
 def redirect_page(request):
+    no_token_saved = False
     # redirect to playlists after valid spotify login
     if not request.user.is_authenticated:
         new_host_user = User.objects.create_user()
         new_host_user.save()
         login(request, new_host_user)
-
-    if not get_user_token(request.user):
+        no_token_saved = True
+    try:
+        if not get_user_token(request.user):
+            no_token_saved = True
+    # get new token and delete old, invalid one
+    except SpotifyException:
+        user_tokens = ApiToken.objects.filter(user=request.user)
+        if user_tokens.exists():
+            user_token = user_tokens[0]
+            user_token.delete()
+            no_token_saved = True
+    if no_token_saved:
         sp_outh = create_spotify_oauth()
         code = request.GET.get('code')
-        token_info = sp_outh.get_access_token(code)
+        token_info = sp_outh.get_access_token(code=code, check_cache=False)
 
         api_token = ApiToken(access_token=token_info['access_token'], refresh_token=token_info['refresh_token'],
                              expires_at=int(token_info['expires_at']), user=request.user)
