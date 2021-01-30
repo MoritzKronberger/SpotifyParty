@@ -31,8 +31,8 @@ def settings(request):
         # get selected device and playlist
         submitted_playlist_id = request.POST.get('playlist')
         submitted_device_id = request.POST.get('device')
-        active_playlists = UserPlaylist.objects.filter(spotify_playlist_id=submitted_playlist_id)
-        active_devices = PlaybackDevice.objects.filter(spotify_device_id=submitted_device_id)
+        active_playlists = UserPlaylist.objects.filter(spotify_playlist_id=submitted_playlist_id, user=request.user)
+        active_devices = PlaybackDevice.objects.filter(spotify_device_id=submitted_device_id, user=request.user)
 
         if active_playlists.exists() and active_devices.exists():
             active_playlist = active_playlists[0]

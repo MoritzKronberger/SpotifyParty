@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.conf import settings
 from django.db.models import UniqueConstraint
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 import uuid
 
 
@@ -52,6 +54,36 @@ class UserJoinedPartySession(models.Model):
     user_vote = models.ForeignKey(Song, on_delete=models.CASCADE, null=True, default=None)
     is_session_host = models.BooleanField(default=False)
     UniqueConstraint(fields=['user', 'party_session'], name='unique_user_partySession')
+
+    def change_vote(self, spotify_song_id):
+        song = Song.objects.filter(spotify_song_id=spotify_song_id, party_session=self.party_session)
+        if song.exists():
+            voted_song = song[0]
+            # remove one vote from old song if exists
+            if self.user_vote is not None:
+                old_song = Song.objects.filter(spotify_song_id=self.user_vote.spotify_song_id, party_session=self.party_session)[0]
+                old_song.song_votes = old_song.song_votes - 1
+                old_song.save()
+            # add one vote to new song and save as voted song if exists
+            if not self.user_vote == voted_song:
+                voted_song.song_votes = voted_song.song_votes + 1
+                voted_song.save()
+                self.user_vote = voted_song
+                self.save()
+            # remove user vote if already voted-for song has been clicked again
+            else:
+                self.user_vote = None
+                self.save()
+            return True
+        return False
+
+
+@receiver(pre_delete, sender=UserJoinedPartySession)
+def remove_vote_on_user_leave_party_session(sender, instance, **kwargs):
+    if instance.user_vote:
+        song = Song.objects.filter(spotify_song_id=instance.user_vote.spotify_song_id, party_session=instance.party_session)[0]
+        song.song_votes = song.song_votes - 1
+        song.save()
 
 
 class UserManager(BaseUserManager):

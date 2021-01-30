@@ -15,7 +15,6 @@ from .views import create_spotify_oauth
 
 class ChatConsumer(AsyncConsumer):
     async def websocket_connect(self, event):
-        # @Moritz authentication here
         self.user = self.scope["user"]
         self.room_name = self.scope['url_route']['kwargs']['room_name']
 
@@ -102,39 +101,15 @@ class ChatConsumer(AsyncConsumer):
             "text": str(init_data).replace("'", '"')
         })
 
-    # processes any messages not caught in websocket_receive, ideally valid spotify_song_ids for votes
+    # processes any messages not caught in websocket_receive, ideally valid spotify_song_ids
     async def new_vote_task(self, event):
-        self.new_vote = str(event.get("text"))
+        new_vote = str(event.get("text"))
 
-        # get user's previous user_vote_id from database
-        prev_vote_id = await self.get_current_user_vote(await self.get_user_join_party_session(self.user, await self.get_current_party_session(self.room_name)))
-        print("vote for " + self.new_vote + "; previous vote was: " + str(prev_vote_id))
-
-        # check if message text corresponds to spotify_song_id of song in this session (returns False if not)
-        voted_song = await self.get_song_by_spotify_id(self.new_vote, await self.get_current_party_session(self.room_name))
-
-        # if user has voted previously save voted song as prev_voted_song, else set to None
-        if prev_vote_id:
-            prev_voted_song = await self.get_song_by_spotify_id(prev_vote_id, await self.get_current_party_session(self.room_name))
-        else:
-            prev_voted_song = None
-
-        # check if message is valid song and votable
-        if voted_song and await self.check_song_votable(voted_song):
-            # check that new vote is different from previous one
-            if voted_song != prev_voted_song:
-                # change user_vote in user_joined_session and add +1 to song's vote count
-                await self.set_user_vote(voted_song, await self.get_user_join_party_session(self.user, await self.get_current_party_session(self.room_name)))
-                await self.change_song_votes(voted_song, 1)
-                # if user voted previously add -1 to previous song's vote count
-                if prev_voted_song:
-                    await self.change_song_votes(prev_voted_song, -1)
-                # create task to echo new vote count
-                asyncio.create_task(self.refresh_votes_task())
-            else:
-                print("song already voted for")
-        else:
-            print("song not votable or doesn't exist")
+        # all possible strings are passed to UserJoinedPartySession change_vote method
+        user_joined_session = await self.get_user_join_party_session(self.user, await self.get_current_party_session(self.room_name))
+        # if vote was valid: refresh votes
+        if await database_sync_to_async(user_joined_session.change_vote)(new_vote):
+            asyncio.create_task(self.refresh_votes_task())
 
     # echoes new vote count to whole session
     async def refresh_votes_task(self):
@@ -205,6 +180,8 @@ class ChatConsumer(AsyncConsumer):
             )
             if await self.get_current_party_session(self.room_name):
                 await self.user_leave_party_session(self.user, await self.get_current_party_session(self.room_name))
+                # refresh votes
+                asyncio.create_task(self.refresh_votes_task())
             print("disconnected User: " + self.user_id, event)
 
     # wrapper functions for websocket send
@@ -398,24 +375,6 @@ class ChatConsumer(AsyncConsumer):
     def delete_current_session(self, party_session):
         current_session = party_session
         current_session.delete()
-
-    @database_sync_to_async
-    def get_current_user_vote(self, user_in_party_session):
-        if user_in_party_session.user_vote:
-            user_vote_id = user_in_party_session.user_vote.spotify_song_id
-            return user_vote_id
-        else:
-            return None
-
-    @database_sync_to_async
-    def set_user_vote(self, voted_song, user_in_party_session):
-        user_in_party_session.user_vote = voted_song
-        user_in_party_session.save()
-
-    @database_sync_to_async
-    def change_song_votes(self, selected_song, vote_amount):
-        selected_song.song_votes = selected_song.song_votes + vote_amount
-        selected_song.save()
 
     @database_sync_to_async
     def get_playback_device(self):
