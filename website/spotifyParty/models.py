@@ -56,7 +56,7 @@ class UserJoinedPartySession(models.Model):
     UniqueConstraint(fields=['user', 'party_session'], name='unique_user_partySession')
 
     def change_vote(self, spotify_song_id):
-        song = Song.objects.filter(spotify_song_id=spotify_song_id, party_session=self.party_session)
+        song = Song.objects.filter(spotify_song_id=spotify_song_id, party_session=self.party_session, is_votable=True)
         if song.exists():
             voted_song = song[0]
             # remove one vote from old song if exists

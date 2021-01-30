@@ -1,67 +1,61 @@
 import asyncio
 import json
 import random
-from asgiref.sync import sync_to_async
-from channels.consumer import AsyncConsumer
-from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from channels.auth import login
-from .models import User, PartySession, UserJoinedPartySession, Song, UserPlaylist, ApiToken, PlaybackDevice
+from .models import PartySession, UserJoinedPartySession, Song, UserPlaylist, ApiToken, PlaybackDevice
 import spotipy
 import time
-
 from .views import create_spotify_oauth
 
 
-class ChatConsumer(AsyncConsumer):
-    async def websocket_connect(self, event):
+class ChatConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
         self.user = self.scope["user"]
         self.room_name = self.scope['url_route']['kwargs']['room_name']
-
-        print("connected", event)
-
+        self.room_group_name = 'mytest_%s' % self.room_name
+        self.user_id = self.user.identifier
         # create user_join_party_session object if not exists
         await self.user_join_party_session(self.user, await self.get_current_party_session(self.room_name))
 
-        print("Current room name: " + self.room_name)
-        self.room_group_name = 'mytest_%s' % self.room_name
-        print("Current group name: " + self.room_group_name)
-        self.user_id = await self.get_user_id()
-        print('User-ID: ' + self.user_id)
+        print('Connected Session: ' + self.room_name)
+        print('Connected User: ' + self.user_id)
 
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
         )
 
-        await self.send({
-            'type': 'websocket.accept'
-        })
-        await self.send({
-            "type": "websocket.send",
-            "text": "Connected to group: " + self.room_group_name
-        })
+        await self.accept()
 
-        # if the session has already been started the user still needs to receive the playing and votable songs
-        session_is_init = await self.get_session_initialized(await self.get_current_party_session(self.room_name))
-        if session_is_init:
+        # initializes the session for a single, late joining user
+        current_session = await self.get_current_party_session(self.room_name)
+        if current_session.is_initialized:
             asyncio.create_task(self.collect_session_data('user_session_init'))
 
     # differentiate client messages here
-    async def websocket_receive(self, event):
-        if str(event.get('text')) == 'Timer':
-            asyncio.create_task(self.timer_task())
-            # check if message is a session_init and if the messaging user is the session-host
-        elif str(event.get('text')) == 'start_party_session' and await self.user_is_session_host(self.user, await self.get_current_party_session(self.room_name)):
+    async def receive(self, text_data):
+        received_data = text_data
+        current_session = await self.get_current_party_session(self.room_name)
+        # check if message is a session_init and if the messaging user is the session-host
+        if str(received_data) == 'start_party_session' and await self.user_is_session_host(self.user,
+                                                                                           self.room_name):
+            playing_song = await self.get_first_song(self.room_name)
+            playing_song.is_playing = True
+            await database_sync_to_async(playing_song.save)()
+            await self.set_votable_songs()
+
             asyncio.create_task(self.collect_session_data('session_init'))
-            # only start voting task if voting is currently allowed
-        elif await self.get_voting_allowed(await self.get_current_party_session(self.room_name)):
-            asyncio.create_task(self.new_vote_task(event))
+
+        # all strings other than 'start_party_session' are treated as potential spotify-song-ids
+        # only start voting task if voting is currently allowed
+        elif current_session.voting_allowed:
+            asyncio.create_task(self.new_vote_task(received_data))
 
     async def collect_session_data(self, message_type):
         # get songs selected for playing and voting from database as dictionaries
-        playing_song = await self.get_playing_song_dict(await self.get_playing_song(await self.get_current_party_session(self.room_name)))
-        votable_songs = await self.get_votable_songs_dict(await self.get_votable_songs(await self.get_current_party_session(self.room_name)))
+        playing_song = await self.get_playing_song_dict(await self.get_playing_song(self.room_name))
+        votable_songs = await self.get_votable_songs_dict(await self.get_votable_songs(self.room_name))
 
         # create JSON-like dictionary with data from above
         collected_data = {
@@ -71,98 +65,92 @@ class ChatConsumer(AsyncConsumer):
         }
 
         if message_type == 'session_init':
-            await self.set_session_initialized(await self.get_current_party_session(self.room_name), True)
+            current_session = await self.get_current_party_session(self.room_name)
+            current_session.is_initialized = True
+            await database_sync_to_async(current_session.save)()
+            # send initial data to all users in session
             asyncio.create_task(self.send_to_session_task(collected_data, message_type))
+            # start playback
             await self.play_song()
         elif message_type == 'session_refresh':
             asyncio.create_task(self.send_to_session_task(collected_data, message_type))
             await self.play_song()
         elif message_type == 'user_session_init':
-            asyncio.create_task(self.send_to_single_user_task(collected_data, message_type))
+            asyncio.create_task(self.send_to_single_user_task(collected_data))
 
-    # starts session and voting on session-hosts command
+    # starts session and voting on the session-host's command
     async def send_to_session_task(self, received_data, message_type):
         init_data = received_data
         await self.set_voting_allowed(await self.get_current_party_session(self.room_name), True)
-        # echo above dictionary in JSON syntax to whole session
+        # echo dictionary to whole session
         await self.channel_layer.group_send(
             self.room_group_name, {
                 "type": message_type,
-                "text": str(init_data).replace("'", '"')
+                "text": init_data
             }
         )
-        # collect votes after song was played
+        # collect votes after song playback is finished
         asyncio.create_task(self.collect_votes_task())
 
-    async def send_to_single_user_task(self, received_data, message_type):
+    async def send_to_single_user_task(self, received_data):
         init_data = received_data
-        await self.send({
+        await self.send(json.dumps({
             "type": "websocket.send",
-            "text": str(init_data).replace("'", '"')
-        })
+            "text": init_data
+        }))
 
-    # processes any messages not caught in websocket_receive, ideally valid spotify_song_ids
-    async def new_vote_task(self, event):
-        new_vote = str(event.get("text"))
-
-        # all possible strings are passed to UserJoinedPartySession change_vote method
-        user_joined_session = await self.get_user_join_party_session(self.user, await self.get_current_party_session(self.room_name))
+    async def new_vote_task(self, received_data):
+        new_vote = str(received_data)
+        print(new_vote)
+        # all possible strings are passed to the UserJoinedPartySession change_vote method
+        user_joined_session = await self.get_user_join_party_session(self.user, self.room_name)
         # if vote was valid: refresh votes
         if await database_sync_to_async(user_joined_session.change_vote)(new_vote):
             asyncio.create_task(self.refresh_votes_task())
 
     # echoes new vote count to whole session
     async def refresh_votes_task(self):
-        # works similar to session_init, but leaves out playing song
-
-        votable_songs = await self.get_votable_songs_dict(await self.get_votable_songs(await self.get_current_party_session(self.room_name)))
-
+        votable_songs = await self.get_votable_songs_dict(await self.get_votable_songs(self.room_name))
         refresh_data = {
             "type": "votes_refresh",
             "votable_songs": votable_songs
         }
-
         await self.channel_layer.group_send(
             self.room_group_name, {
                 "type": "votes_refresh",
-                "text": str(refresh_data).replace("'", '"')
+                "text": refresh_data
             }
         )
 
     async def collect_votes_task(self):
-
-        playing_song = await self.get_playing_song(await self.get_current_party_session(self.room_name))
-        wait_time = await self.get_song_length(playing_song)
+        playing_song = await self.get_playing_song(self.room_name)
+        wait_time = playing_song.song_length
         await asyncio.sleep(wait_time/1000)
 
-        # kills task if host has disconnected
+        # skips task if host has already disconnected
         if await self.get_current_party_session(self.room_name):
-            # no additional votes should be added during processing, will be re-allowed on session refresh
+            # no additional votes should be added during processing,
+            # voting will be re-allowed on session refresh
             await self.set_voting_allowed(await self.get_current_party_session(self.room_name), False)
 
-            votable_songs = await self.get_votable_songs(await self.get_current_party_session(self.room_name))
-
+            votable_songs = await self.get_votable_songs(self.room_name)
             most_voted_song = await self.get_most_voted_song(votable_songs)
-
             await self.set_new_playing_song(most_voted_song, playing_song)
-
-            # must be called after the new playing_song is set, to properly exclude it from being eligible for voting
-            # number of new songs hardcoded, could be decided on with user option
-            not_played_songs = await self.get_not_played_songs(await self.get_current_party_session(self.room_name))
-
-            for i in range(4):
-                await self.change_song_votable(random.choice(not_played_songs), True)
-                # variable is set again to exclude the just set song
-                not_played_songs = await self.get_not_played_songs(await self.get_current_party_session(self.room_name))
+            await self.set_votable_songs()
 
             # refresh session
             asyncio.create_task(self.collect_session_data('session_refresh'))
 
-    async def websocket_disconnect(self, event):
-        # close websocket for all users in session and delete session model cascading, if session-host disconnects
-        if await self.get_current_party_session(self.room_name) and await self.user_is_session_host(self.user, await self.get_current_party_session(self.room_name)):
-            print("disconnected Host-User: " + self.user_id + " disconnecting all users and deleting session", event)
-            await self.delete_current_session(await self.get_current_party_session(self.room_name))
+    async def disconnect(self, close_code):
+        # if host disconnects:
+        # close websocket for all users in session, delete partySession instance cascade
+        # and stop Consumer
+        if await self.get_current_party_session(self.room_name) and await self.user_is_session_host(self.user,
+                                                                                                    self.room_name):
+            print('Disconnected Host-User: ' + self.user_id)
+            print('All other Users will be disconnected!')
+            current_session = await self.get_current_party_session(self.room_name)
+            await database_sync_to_async(current_session.delete)()
             await self.channel_layer.group_send(
                 self.room_group_name, {
                     "type": "force_disconnect"
@@ -172,64 +160,98 @@ class ChatConsumer(AsyncConsumer):
                 self.room_group_name,
                 self.channel_name
             )
-        # only delete user_joined_party_session instance if non-host-user disconnects
+
+        # if non-host-user disconnects:
+        # delete userJoinedPartySession instance
         else:
             await self.channel_layer.group_discard(
                 self.room_group_name,
                 self.channel_name
             )
             if await self.get_current_party_session(self.room_name):
-                await self.user_leave_party_session(self.user, await self.get_current_party_session(self.room_name))
+                # delete user-party_session-relationship
+                await database_sync_to_async(UserJoinedPartySession.objects.filter(
+                    user=self.user, party_session__session_code=self.room_name).delete)()
                 # refresh votes
                 asyncio.create_task(self.refresh_votes_task())
-            print("disconnected User: " + self.user_id, event)
+            print("Disconnected User: " + self.user_id)
 
     # wrapper functions for websocket send
     async def session_init(self, event):
-        await self.send({
+        await self.send(json.dumps({
             "type": "websocket.send",
             "text": event['text']
-        })
+        }))
 
     async def session_refresh(self, event):
-        await self.send({
+        await self.send(json.dumps({
             "type": "websocket.send",
             "text": event['text']
-        })
+        }))
 
     async def votes_refresh(self, event):
-        await self.send({
+        await self.send(json.dumps({
             "type": "websocket.send",
             "text": event['text']
-        })
+        }))
 
     async def force_disconnect(self, event):
         await self.send({
             "type": "websocket.close"
         })
 
+    # regular async functions
+    async def set_votable_songs(self):
+        for i in range(4):
+            not_played_songs = await self.get_not_played_songs(self.room_name)
+            random_song = random.choice(not_played_songs)
+            random_song.is_votable = True
+            await database_sync_to_async(random_song.save)()
+
+    async def get_playing_song_dict(self, playing_song):
+        return {
+            "title": playing_song.song_name,
+            "artist": playing_song.song_artist,
+            "length": playing_song.song_length,
+            "song_id": playing_song.spotify_song_id,
+            "cover_link": playing_song.song_cover_link
+        }
+
+    async def get_votable_songs_dict(self, votable_songs):
+        votable_songs_arr = []
+        for song in votable_songs:
+            votable_songs_arr.append(
+                {
+                    "title": song.song_name,
+                    "artist": song.song_artist,
+                    "length": song.song_length,
+                    "votes": song.song_votes,
+                    "song_id": song.spotify_song_id,
+                    "cover_link": song.song_cover_link
+                }
+            )
+        return votable_songs_arr
+
     # starts playback for song selected as currently playing
     async def play_song(self):
         sp = spotipy.Spotify(auth=await self.get_user_token())
         playback_device = await self.get_playback_device()
-        playing_song = await self.get_playing_song(await self.get_current_party_session(self.room_name))
-        # start playback on selected device and playlist id
-        sp.start_playback(device_id=playback_device.spotify_device_id, uris=["spotify:track:" + str(playing_song.spotify_song_id)])
+        playing_song = await self.get_playing_song(self.room_name)
+        # start playback on selected device
+        sp.start_playback(device_id=playback_device.spotify_device_id,
+                          uris=["spotify:track:" + str(playing_song.spotify_song_id)])
 
-    # functions with database_sync_to_async-decorator to access database for basic queries
+    # functions for database queries
+    # or repeated database access
     @database_sync_to_async
-    def get_user_join_party_session(self, user, party_session):
-        return UserJoinedPartySession.objects.filter(user=user, party_session=party_session)[0]
+    def get_user_join_party_session(self, user, session_code):
+        return UserJoinedPartySession.objects.filter(user=user, party_session__session_code=session_code)[0]
 
     @database_sync_to_async
     def user_join_party_session(self, user, party_session):
         if not UserJoinedPartySession.objects.filter(user=user, party_session=party_session):
             new_user_joined_party_session = UserJoinedPartySession(user=user, party_session=party_session)
             new_user_joined_party_session.save()
-
-    @database_sync_to_async
-    def user_leave_party_session(self, user, party_session):
-        UserJoinedPartySession.objects.filter(user=user, party_session=party_session).delete()
 
     @database_sync_to_async
     def get_current_party_session(self, current_session_code):
@@ -240,104 +262,45 @@ class ChatConsumer(AsyncConsumer):
             return False
 
     @database_sync_to_async
-    def set_session_initialized(self, party_session, session_status):
-        party_session.is_initialized = session_status
-        party_session.save()
-
-    @database_sync_to_async
-    def get_session_initialized(self, party_session):
-        current_party_session = party_session
-        return current_party_session.is_initialized
-
-    @database_sync_to_async
-    def get_voting_allowed(self, party_session):
-        return party_session.voting_allowed
-
-    @database_sync_to_async
     def set_voting_allowed(self, party_session, voting_allowed):
         party_session.voting_allowed = voting_allowed
         party_session.save()
 
     @database_sync_to_async
-    def get_user_id(self):
-        return self.user.identifier
+    def user_is_session_host(self, user, session_code):
+        return UserJoinedPartySession.objects.filter(user=user, party_session__session_code=session_code)[
+            0].is_session_host
 
     @database_sync_to_async
-    def user_is_session_host(self, user, party_session):
-        return UserJoinedPartySession.objects.filter(user=user, party_session=party_session)[0].is_session_host
-
-    @database_sync_to_async
-    def get_playing_song(self, party_session):
-        playing_song = Song.objects.filter(party_session=party_session, is_playing=True)[0]
+    def get_playing_song(self, session_code):
+        playing_song = Song.objects.filter(party_session__session_code=session_code, is_playing=True)[0]
         return playing_song
 
     @database_sync_to_async
-    def get_playing_song_dict(self, playing_song):
-        return {
-            "title_and_artist": playing_song.song_name + " - " + playing_song.song_artist,
-            "length": playing_song.song_length,
-            "song_id": playing_song.spotify_song_id,
-            "cover_link": playing_song.song_cover_link
-        }
+    def get_first_song(self, session_code):
+        first_song = Song.objects.filter(party_session__session_code=session_code)[0]
+        return first_song
 
     @database_sync_to_async
-    def get_votable_songs(self, party_session):
-        votable_songs = Song.objects.filter(party_session=party_session, is_votable=True)
-        return votable_songs
+    def get_votable_songs(self, session_code):
+        votable_songs = Song.objects.filter(party_session__session_code=session_code, is_votable=True)
+        # returns queryset as list for use with an asynchronous function
+        return list(votable_songs)
 
     @database_sync_to_async
-    def get_not_played_songs(self, party_session):
-        # also excludes currently playing song and songs tha are already set as votable
-        not_played_songs = Song.objects.filter(party_session=party_session, was_played=False, is_playing=False, is_votable=False)
-
+    def get_not_played_songs(self, session_code):
         # if no songs are eligible, all songs are reset to not_played=False
-        if not not_played_songs:
-            all_songs = Song.objects.filter(party_session=party_session, is_playing=False)
+        if not Song.objects.filter(party_session__session_code=session_code, was_played=False, is_playing=False,
+                                   is_votable=False).exists():
+            all_songs = Song.objects.filter(party_session__session_code=session_code, is_playing=False)
             for song in all_songs:
                 song.was_played = False
                 song.save()
-            not_played_songs = all_songs
 
-        return not_played_songs
-
-    @database_sync_to_async
-    def get_votable_songs_dict(self, votable_songs):
-        votable_songs_arr = []
-
-        for song in votable_songs:
-            votable_songs_arr.append(
-                {
-                    "title_and_artist": song.song_name + " - " + song.song_artist,
-                    "length": song.song_length,
-                    "votes": song.song_votes,
-                    "song_id": song.spotify_song_id,
-                    "cover_link": song.song_cover_link
-                }
-            )
-
-        return votable_songs_arr
-
-    @database_sync_to_async
-    def check_song_votable(self, song):
-        return song.is_votable
-
-    @database_sync_to_async
-    def get_song_by_spotify_id(self, spotify_id, party_session):
-        song = Song.objects.filter(spotify_song_id=spotify_id, party_session=party_session)
-        if song.exists():
-            return song[0]
-        else:
-            return False
-
-    @database_sync_to_async
-    def get_song_length(self, song):
-        return song.song_length
-
-    @database_sync_to_async
-    def change_song_votable(self, song, new_votable):
-        print("Changed song" + str(song.spotify_song_id))
-        song.is_votable = new_votable
-        song.save()
+        not_played_songs = Song.objects.filter(party_session__session_code=session_code, was_played=False,
+                                               is_playing=False, is_votable=False)
+        # returns queryset as list for use with an asynchronous function
+        return list(not_played_songs)
 
     @database_sync_to_async
     def set_new_playing_song(self, new_playing_song, prev_playing_song):
@@ -349,7 +312,8 @@ class ChatConsumer(AsyncConsumer):
 
     @database_sync_to_async
     def get_most_voted_song(self, votable_songs):
-        # in case of draw in vote_count set first song as song with most votes
+        # in case of drawn vote_count with 0 votes:
+        # set first song as song with most votes
         most_voted_song = votable_songs[0]
         most_votes = 0
         for song in votable_songs:
@@ -361,7 +325,7 @@ class ChatConsumer(AsyncConsumer):
             song.is_votable = False
             song.song_votes = 0
             song.save()
-        # fixes bug where song with 0 votes stays votable
+        # reset is_votable for first song in case of draw at 0 votes
         most_voted_song.is_votable = False
         most_voted_song.save()
         return most_voted_song
@@ -370,11 +334,6 @@ class ChatConsumer(AsyncConsumer):
     def get_user_playlist(self):
         user_playlist = UserPlaylist.objects.filter(is_selected=True, user=self.user)[0]
         return user_playlist
-
-    @database_sync_to_async
-    def delete_current_session(self, party_session):
-        current_session = party_session
-        current_session.delete()
 
     @database_sync_to_async
     def get_playback_device(self):

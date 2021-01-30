@@ -56,17 +56,7 @@ def settings(request):
 
             # get songs for current session and save to db
             fetch_playlist_tracks_from_spotify(request.user, active_playlist.spotify_playlist_id, new_party_session)
-            # set first song as playing
-            first_song = Song.objects.filter(party_session=new_party_session)[0]
-            first_song.is_playing = True
-            first_song.save()
-            # sets 4 random songs as votable
-            for i in range(4):
-                not_votable_songs = Song.objects.filter(party_session=new_party_session, is_votable=False)
-                song_count = len(not_votable_songs)-1
-                song = not_votable_songs[random.randint(1, song_count)]
-                song.is_votable = True
-                song.save()
+
             # redirects to view for the created party_session
             return HttpResponseRedirect(reverse('party_session', kwargs={'room_name': random_session_code}))
 

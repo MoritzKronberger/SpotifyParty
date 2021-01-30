@@ -34,42 +34,36 @@ let playing_song_card = document.getElementById("playing_song");
 let votable_song_card = document.getElementById("votable_songs");
 
 // var section for button
-var loc = window.location;
-var formData = document.getElementById("form");
+let loc = window.location;
+let formData = document.getElementById("form");
 
 // var section for timer
 let timer = document.getElementById("timer");
     timer.style.display = "block";
 
 // Websocket routing
-var wsStart = 'ws://';
+let wsStart = 'ws://';
 if(loc.protocol === 'https:') {
     wsStart = 'wss://';
 }
 
-var endpoint = wsStart + loc.host + loc.pathname;//
-var socket = new WebSocket(endpoint);
+let endpoint = wsStart + loc.host + loc.pathname;//
+let socket = new WebSocket(endpoint);
 
 // Receiving Python Data
-socket.onmessage = function(e)
-{
-    console.log(e);
-    console.log(e.data);
+socket.onmessage = function(e) {
+    let message = JSON.parse(e.data);
+    let message_text = message.text;
 
-    // session is initialized (either with session_init or user_session_init
-    if(e.data.includes('session_init')){
-        const from_json = JSON.parse(e.data);
-        console.log(from_json);
+    console.log(message_text)
 
-        fillCards(from_json);
+    if(message_text["type"]=="session_init" || message_text["type"]=='user_session_init'){
+        fillCards(message_text);
     }
-
     // votes are refreshed
-    else if(e.data.includes('votes_refresh')) {
-        const from_json = JSON.parse(e.data);
-        console.log(from_json);
+    else if(message_text["type"]=="votes_refresh") {
 
-        let votable_songs = from_json["votable_songs"];
+        let votable_songs = message_text["votable_songs"];
 
         // replace old vote count with new values
         votable_songs.forEach(function(song){
@@ -78,22 +72,19 @@ socket.onmessage = function(e)
             voteCounter[0].innerText = "Votes: " + String(song["votes"]);
         });
     }
-
     // session is refreshed
-    else if(e.data.includes('session_refresh')) {
-        const from_json = JSON.parse(e.data);
-        console.log(from_json);
+    else if(message_text["type"]=="session_refresh") {
         playing_song_card.innerHTML = '';
         votable_song_card.innerHTML = '';
-        fillCards(from_json);
+        fillCards(message_text);
     }
 }
 
 // fills placeholder cards with data from JSON-Object
-function fillCards(from_json){
+function fillCards(message_text){
         // get data from json object
-        let playing_song = from_json["playing_song"];
-        let votable_songs = from_json["votable_songs"];
+        let playing_song = message_text['playing_song'];
+        let votable_songs = message_text['votable_songs'];
 
         // create html elements for now playing song from data
         let pSong_headline = document.createElement("H5");
@@ -103,7 +94,7 @@ function fillCards(from_json){
         pSong_cover.src = playing_song["cover_link"];
         pSong_cover.id = "song_cover";
         let pSong_name = document.createElement("P");
-        pSong_name.innerText = playing_song["title_and_artist"];
+        pSong_name.innerText = playing_song["title"] + " - " + playing_song["artist"];
 
         let pSong_length = document.createElement("P");
         pSong_length.innerText = "Length: " + playing_song["length"] + " ms.";
@@ -126,7 +117,7 @@ function fillCards(from_json){
             vSong_cover.src = song["cover_link"];
             vSong_cover.id = "song_cover";
             let vSong_name = document.createElement("P");
-            vSong_name.innerText = song["title_and_artist"];
+            vSong_name.innerText = song["title"] + " - " + song["artist"];
             let vSong_votes = document.createElement("P");
             vSong_votes.className = "vote_counter"
             vSong_votes.innerText = "Votes: " + String(song["votes"]);
