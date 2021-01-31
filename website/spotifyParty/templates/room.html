@@ -64,13 +64,16 @@ socket.onmessage = function(e) {
     else if(message_text["type"]=="votes_refresh") {
 
         let votable_songs = message_text["votable_songs"];
-
+        console.log(votable_songs);
+        let votable_song_cards = document.getElementsByClassName('votable_song')
+        console.log(votable_song_cards);
         // replace old vote count with new values
-        votable_songs.forEach(function(song){
-            let vSongCard = document.getElementById(song["song_id"]);
-            let voteCounter = vSongCard.getElementsByClassName("vote_counter");
-            voteCounter[0].innerText = "Votes: " + String(song["votes"]);
-        });
+        for( let i=0; i<votable_songs.length; i++){
+            console.log(votable_song_cards[i]);
+            let voteCounter = votable_song_cards[i].getElementsByClassName("vote_counter")[0]
+            console.log(voteCounter);
+            voteCounter.innerText = "Votes: " + String(votable_songs[i]["votes"]);
+        }
     }
     // session is refreshed
     else if(message_text["type"]=="session_refresh") {
