@@ -101,7 +101,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def new_vote_task(self, received_data):
         new_vote = str(received_data)
-        print(new_vote)
         # all possible strings are passed to the UserJoinedPartySession change_vote method
         user_joined_session = await self.get_user_join_party_session(self.user, self.room_name)
         # if vote was valid: refresh votes

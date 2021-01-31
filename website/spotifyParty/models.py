@@ -61,7 +61,7 @@ class UserJoinedPartySession(models.Model):
             voted_song = song[0]
             # remove one vote from old song if exists
             if self.user_vote is not None:
-                old_song = Song.objects.filter(spotify_song_id=self.user_vote.spotify_song_id, party_session=self.party_session)[0]
+                old_song = self.user_vote
                 old_song.song_votes = old_song.song_votes - 1
                 old_song.save()
             # add one vote to new song and save as voted song if exists
