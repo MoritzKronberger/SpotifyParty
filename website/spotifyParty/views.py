@@ -44,8 +44,7 @@ def settings(request):
             active_device.save()
 
             # create new PartySession
-            characters = string.ascii_lowercase
-            random_session_code = ''.join(random.choice(characters) for i in range(6))
+            random_session_code = create_session_code()
             new_party_session = PartySession(session_code=random_session_code)
             new_party_session.save()
 
@@ -104,6 +103,14 @@ def party_session(request, room_name):
         # redirects back to index if no matching session exists
         return HttpResponseRedirect(reverse('index'))
 
+
+def create_session_code():
+    characters = string.ascii_lowercase
+    random_session_code = ''.join(random.choice(characters) for i in range(6))
+    if PartySession.objects.filter(session_code=random_session_code).exists():
+        create_session_code()
+    else:
+        return random_session_code
 
 # ------------------- spotify api section ------------------------------
 
