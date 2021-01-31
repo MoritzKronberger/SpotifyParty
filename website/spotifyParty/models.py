@@ -70,10 +70,13 @@ class UserJoinedPartySession(models.Model):
                 voted_song.save()
                 self.user_vote = voted_song
                 self.save()
+                print(str(self.user_vote.id) + ' ; ' + self.user_vote.spotify_song_id)
+                print(str(voted_song.id) + ' ; ' + voted_song.spotify_song_id + ' ; ' + str(voted_song.song_votes))
             # remove user vote if already voted-for song has been clicked again
             else:
                 self.user_vote = None
                 self.save()
+                print(self.user_vote)
             return True
         return False
 
