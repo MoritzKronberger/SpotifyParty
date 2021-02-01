@@ -14,13 +14,17 @@
     }
 
     #playing_song {
+        display: flex;
+        flex-direction: column;
         align-items: center;
         text-align: center;
+        justify-content: center;
     }
 
     #playing_song > h5 {
         color: white;
         font-size: 30px;
+        margin-top: 1em;
         margin-bottom: 10px;
     }
 
@@ -54,25 +58,6 @@
           width: 100%;
     }
 
-    .votable_song > h3 {
-        color: white;
-        font-size: 20px;
-        margin-top: 0px;
-        margin-left: 3px;
-        margin-bottom: 0px;
-        padding-top: 0px;
-    }
-
-    .votable_song > p {
-        margin-top: 0px;
-        padding-top: 0px;
-        color: darkgray;
-        font-size: 15px;
-        font-weight: bold;
-        margin-left: 3px;
-
-    }
-
     .songName {
         color: white;
         font-size: 20px;
@@ -102,16 +87,23 @@
         margin-bottom: 0px;
     }
 
-    .vote_counter > p {
-        color: red;
-    }
-
-    #start_button {
-
-    }
-
     #start_button:hover {
         background-color: #FFBD7D;
+    }
+
+    #progress {
+        width: 70%;
+        margin-top: 0.8em;
+        margin-bottom: 0;
+        border-radius: 0.5em;
+        background-color: #202020;
+    }
+
+    #progressBar {
+        width: 1%;
+        height: 0.5em;
+        border-radius: 0.25em;
+        background-color: #5A5A5A;
     }
 
     .marquee {
@@ -184,24 +176,6 @@
           width: 100%;
     }
 
-    .votable_song > h3 {
-        color: white;
-        font-size: 20px;
-        margin-top: 0px;
-        margin-left: 3px;
-        margin-bottom: 0px;
-        padding-top: 0px;
-    }
-
-    .votable_song > p {
-        margin-top: 0px;
-        padding-top: 0px;
-        color: darkgray;
-        font-size: 15px;
-        font-weight: bold;
-        margin-left: 3px;
-
-    }
     .songName {
         color: white;
         font-size: 20px;
@@ -229,10 +203,6 @@
         background-color: #FFAF60;
         color: white;
         margin-bottom: 0px;
-    }
-
-    .vote_counter > p {
-        color: red;
     }
 
     #start_button:hover {

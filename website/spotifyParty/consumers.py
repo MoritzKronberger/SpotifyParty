@@ -69,13 +69,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
             current_session.is_initialized = True
             await database_sync_to_async(current_session.save)()
             # send initial data to all users in session
+            playback_started = await self.record_playback_start(self.room_name)
+            collected_data["playback_started"] = playback_started
             asyncio.create_task(self.send_to_session_task(collected_data, message_type))
             # start playback
             await self.play_song()
         elif message_type == 'session_refresh':
+            playback_started = await self.record_playback_start(self.room_name)
+            collected_data["playback_started"] = playback_started
             asyncio.create_task(self.send_to_session_task(collected_data, message_type))
             await self.play_song()
         elif message_type == 'user_session_init':
+            session = await self.get_current_party_session(self.room_name)
+            playback_started = session.playback_started
+            collected_data["playback_started"] = playback_started
             asyncio.create_task(self.send_to_single_user_task(collected_data))
 
     # starts session and voting on the session-host's command
@@ -195,9 +202,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         }))
 
     async def force_disconnect(self, event):
-        await self.send({
+        await self.send(json.dumps({
             "type": "websocket.close"
-        })
+        }))
 
     # regular async functions
     async def set_votable_songs(self):
@@ -333,6 +340,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def get_user_playlist(self):
         user_playlist = UserPlaylist.objects.filter(is_selected=True, user=self.user)[0]
         return user_playlist
+
+    @database_sync_to_async
+    def record_playback_start(self, session_code):
+        session = PartySession.objects.filter(session_code=session_code)[0]
+        session.playback_started = int(time.time())
+        session.save()
+        return session.playback_started
 
     @database_sync_to_async
     def get_playback_device(self):

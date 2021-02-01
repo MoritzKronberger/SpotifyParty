@@ -85,11 +85,17 @@ function fillCards(message_text){
 
         // create html elements for now playing song from data
         let pSong_headline = document.createElement("H5");
-        <!--pSong_headline.innerText = "Now Playing:"; -->
 
         let pSong_cover = document.createElement("IMG");
         pSong_cover.src = playing_song["cover_link"];
         pSong_cover.id = "song_cover";
+
+        let progress = document.createElement("DIV");
+        progress.id = "progress";
+        let progressBar = document.createElement("DIV");
+        progressBar.id = "progressBar";
+        progress.appendChild(progressBar);
+
         let pSong_name = document.createElement("P");
         pSong_name.innerText = playing_song["title"] + " - " + playing_song["artist"];
 
@@ -99,8 +105,10 @@ function fillCards(message_text){
         // append html elements for now playing song to placeholder div
         playing_song_card.appendChild(pSong_headline);
         playing_song_card.appendChild(pSong_cover);
+        playing_song_card.appendChild(progress);
         playing_song_card.appendChild(pSong_name);
-        playing_song_card.appendChild(pSong_length);
+
+        moveProgress(message_text['playback_started']*1000, playing_song["length"]);
 
         // for each votable song in the dataset create div with html elements and EventListener
         votable_songs.forEach(function(song){
@@ -143,16 +151,36 @@ function fillCards(message_text){
 }
 
 function marqueeOverflow(parentNode, element, text, className){
-            if(element.getBoundingClientRect().width > parentNode.clientWidth){
-                let secondSpan = document.createElement("SPAN");
-                secondSpan.innerText = text;
-                secondSpan.className = className;
-                parentNode.appendChild(secondSpan);
-                parentNode.querySelectorAll('.' + className).forEach(function (el) {
-                    el.className = className + ' marquee'
-                })
-            }
+    if(element.getBoundingClientRect().width > parentNode.clientWidth){
+        let secondSpan = document.createElement("SPAN");
+        secondSpan.innerText = text;
+        secondSpan.className = className;
+        parentNode.appendChild(secondSpan);
+        parentNode.querySelectorAll('.' + className).forEach(function (el) {
+            el.className = className + ' marquee'
+        })
+    }
+}
+
+function moveProgress(playbackStarted, songDuration) {
+    let bar = document.getElementById("progressBar");
+    let id = setInterval(frame, 10);
+
+    function frame() {
+        let currentTimestamp = Date.now();
+        let remainingPlayback = currentTimestamp - playbackStarted;
+        let progressPercent = remainingPlayback / songDuration;
+
+        if (progressPercent >= 1) {
+            let barWidth = 100;
+            bar.style.width = barWidth + "%";
+            clearInterval(id);
+        } else {
+            let barWidth = 100 * progressPercent;
+            bar.style.width = barWidth + "%";
         }
+    }
+}
 
 // Sending Data to Python
 socket.onopen = function(e)

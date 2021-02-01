@@ -11,6 +11,7 @@ class PartySession(models.Model):
     session_code = models.CharField(max_length=6)
     is_initialized = models.BooleanField(default=False)
     voting_allowed = models.BooleanField(default=False)
+    playback_started = models.IntegerField(null=True, default=None)
 
 
 class UserPlaylist(models.Model):
