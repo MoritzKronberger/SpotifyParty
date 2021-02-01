@@ -31,12 +31,8 @@
     }
 
     img {
-        width: 300px;
+        width: 50%;
         height: auto;
-    }
-
-    #votable_songs {
-
     }
 
     .votable_song {
