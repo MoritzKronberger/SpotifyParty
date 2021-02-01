@@ -3,27 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <title>SessionSettings</title>
+         {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style_settings.css' %}">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
     <h1>Settings</h1>
     <p>{{ error_msg }}</p>
-    <p>Please choose the settings for your Party:</p>
+    <h2>Please choose the settings for your Party:</h2>
+    <div class="flex">
     <form action="" method="post">
         {% csrf_token %}
-         <label for="playlist">Select your playlist:</label>
+
+        <label for="playlist"><h2>playlist</h2></label>
+         <div class="select-playlist">
           <select id="playlist" name="playlist">
               {% for playlist in playlists %}
                 <option value={{ playlist.playlist_id }}>{{ playlist.playlist_name }}</option>
               {% endfor %}
           </select>
+            </div>
         <br>
-        <label for="device">Select your playback-device:</label>
+        <label for="device"><h2>playback-device</h2></label>
+         <div class="select-device">
           <select id="device" name="device">
             {% for device in devices %}
                 <option value={{ device.device_id }}>{{ device.device_name }}</option>
             {% endfor %}
           </select>
-        <p><input type="submit"></p>
+         </div>
+        <p><input value="start" type="submit"></p>
     </form>
+        </div>
 </body>
 </html>

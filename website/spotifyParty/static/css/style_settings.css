@@ -1,0 +1,73 @@
+@media (max-width: 600px) {
+    input {
+        background-color: #FFAF60;
+        border-radius: 5px;
+        width: 40%;
+        height: 45px;
+        color: #2B2B2B;
+        border-style: none;
+        font-size: 130%;
+        font-weight: bold;
+        margin-top: 15%;
+    }
+
+    .select-playlist {
+        margin-top: 5%;
+    }
+
+    .select-device {
+        margin-top: 5%;
+    }
+
+    option {
+        width: 100px;
+        height: 40px;
+        padding-left: 10px;
+        outline: none;
+        border: none;
+        background-color: #2B2B2B;;
+        font-weight: bold;
+        color: white;
+    }
+
+    input:hover {
+        background-color: #FFBD7D;
+    }
+}
+
+@media (min-width: 600px) {
+    input {
+        background-color: #FFAF60;
+        border-radius: 5px;
+        width: 200px;
+        height: 45px;
+        color: #2B2B2B;
+        border-style: none;
+        font-size: 130%;
+        font-weight: bold;
+    }
+
+    .select-playlist {
+        margin-top: 1%;
+    }
+
+    .select-device {
+        margin-top: 1%;
+        margin-bottom: 5%;
+    }
+
+    option {
+        width: 150px;
+        height: 40px;
+        padding-left: 10px;
+        outline: none;
+        border: none;
+        background-color: #2B2B2B;;
+        font-weight: bold;
+        color: white;
+    }
+
+    input:hover {
+        background-color: #FFBD7D;
+    }
+}

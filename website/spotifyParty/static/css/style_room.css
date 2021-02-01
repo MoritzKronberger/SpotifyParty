@@ -1,0 +1,184 @@
+
+@media only screen and (max-width: 600px) {
+
+    input {
+        background-color: #FFAF60;
+        border-radius: 5px;
+        width: 200px;
+        height: 45px;
+        color: #2B2B2B;
+        border-style: none;
+        font-size: 20px;
+        font-weight: bold;
+        align-items: center;
+    }
+
+    #playing_song {
+        align-items: center;
+        text-align: center;
+    }
+
+    #playing_song > h5 {
+        color: white;
+        font-size: 30px;
+        margin-bottom: 10px;
+    }
+
+    #playing_song > p {
+        color: #FFAF60;
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    img {
+        width: 300px;
+        height: auto;
+    }
+
+    #votable_songs {
+
+    }
+
+    .votable_song {
+        width: 40%;
+        float: left;
+        margin-bottom: 5%;
+        margin-left: 5%;
+        margin-right: 5%;
+    }
+
+
+    .votable_song:hover {
+        background-color: #222222;
+    }
+
+    .votable_song > img {
+        width: 100%;
+    }
+
+    .votable_song > h3 {
+        color: white;
+        font-size: 20px;
+        margin-top: 0px;
+        margin-left: 3px;
+        margin-bottom: 0px;
+        padding-top: 0px;
+    }
+
+    .votable_song > p {
+        margin-top: 0px;
+        padding-top: 0px;
+        color: darkgray;
+        font-size: 15px;
+        font-weight: bold;
+        margin-left: 3px;
+
+    }
+
+    .vote_counter {
+        background-color: #FFAF60;
+        margin-bottom: 0px;
+    }
+
+    .vote_counter > p {
+        color: red;
+    }
+
+    #start_button {
+
+    }
+
+    #start_button:hover {
+        background-color: #FFBD7D;
+    }
+}
+
+
+@media only screen and (min-width: 600px) {
+
+    input {
+        background-color: #FFAF60;
+        border-radius: 5px;
+        width: 200px;
+        height: 45px;
+        color: #2B2B2B;
+        border-style: none;
+        font-size: 20px;
+        font-weight: bold;
+        align-items: center;
+    }
+
+    #playing_song {
+        align-items: center;
+        text-align: center;
+    }
+
+    #playing_song > h5 {
+        color: white;
+        font-size: 30px;
+        margin-bottom: 10px;
+    }
+
+    #playing_song > p {
+        color: #FFAF60;
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    img {
+         width: 20%;
+    }
+
+    #votable_songs {
+        width: 100%;
+    }
+
+    .votable_song {
+        width: 14%;
+        float: left;
+        margin-bottom: 5%;
+        margin-left: 5%;
+        margin-right: 5%;
+    }
+
+
+    .votable_song:hover {
+        background-color: #222222;
+    }
+
+    .votable_song > img {
+          width: 100%;
+    }
+
+    .votable_song > h3 {
+        color: white;
+        font-size: 20px;
+        margin-top: 0px;
+        margin-left: 3px;
+        margin-bottom: 0px;
+        padding-top: 0px;
+    }
+
+    .votable_song > p {
+        margin-top: 0px;
+        padding-top: 0px;
+        color: darkgray;
+        font-size: 15px;
+        font-weight: bold;
+        margin-left: 3px;
+
+    }
+
+    .vote_counter {
+        background-color: #FFAF60;
+        margin-bottom: 0px;
+    }
+
+    .vote_counter > p {
+        color: red;
+    }
+
+    #start_button:hover {
+        background-color: #FFBD7D;
+    }
+}

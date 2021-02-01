@@ -3,27 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <title>Shared Playlist</title>
-    <style>
-        #song_cover{
-            width: 20%;
-        }
-    </style>
+     {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style_room.css' %}">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-<h1>Websocket Test Env</h1>
+<h1>Party Session</h1>
 <form id="form" method="post">
     {% csrf_token %}
-    <input type="submit" value="Start Session">
+    <input id="start_button" type="submit" value="Start Session">
 </form>
-
-
 
 <p id="timer"></p>
 
 <div id="playing_song"></div>
 <br>
 <br>
-<div id="votable_songs"></div>
+<div class="flexrow" id="votable_songs"></div>
 
 {% block script %}
 <script>
@@ -32,7 +29,7 @@ console.log(window.location);
 // vars for appending selected songs
 let playing_song_card = document.getElementById("playing_song");
 let votable_song_card = document.getElementById("votable_songs");
-
+let start_btn = document.getElementById("start_button");
 // var section for button
 let loc = window.location;
 let formData = document.getElementById("form");
@@ -81,6 +78,7 @@ socket.onmessage = function(e) {
 
 // fills placeholder cards with data from JSON-Object
 function fillCards(message_text){
+        start_btn.style.display = "None";
         // get data from json object
         let playing_song = message_text['playing_song'];
         let votable_songs = message_text['votable_songs'];
@@ -96,7 +94,7 @@ function fillCards(message_text){
         pSong_name.innerText = playing_song["title"] + " - " + playing_song["artist"];
 
         let pSong_length = document.createElement("P");
-        pSong_length.innerText = "Length: " + playing_song["length"] + " ms.";
+        <!-- pSong_length.innerText = "Length: " + playing_song["length"] + " ms."; -->
 
         // append html elements for now playing song to placeholder div
         playing_song_card.appendChild(pSong_headline);
@@ -115,17 +113,19 @@ function fillCards(message_text){
             let vSong_cover = document.createElement("IMG");
             vSong_cover.src = song["cover_link"];
             vSong_cover.id = "song_cover";
-            let vSong_name = document.createElement("P");
-            vSong_name.innerText = song["title"] + " - " + song["artist"];
+            let vSong_name = document.createElement("H3");
+            vSong_name.innerText = song["title"];
+            let vSong_artist = document.createElement("P");
+            vSong_artist.innerText = song["artist"];
             let vSong_votes = document.createElement("P");
             vSong_votes.className = "vote_counter"
             vSong_votes.innerText = "Votes: " + String(song["votes"]);
 
             // append html elements to div
             vSongCard.appendChild(vSong_cover);
-            vSongCard.appendChild(vSong_name);
             vSongCard.appendChild(vSong_votes);
-
+            vSongCard.appendChild(vSong_name);
+            vSongCard.appendChild(vSong_artist);
             // add EventListener to send clicked song-id over websocket as vote
             vSongCard.addEventListener('click', function(event){
                 event.preventDefault();

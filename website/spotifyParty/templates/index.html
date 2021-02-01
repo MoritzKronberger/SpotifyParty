@@ -3,19 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <title>SpotifyParty</title>
+     {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style_index.css' %}">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
+
 <body>
     <h1>Welcome to SpotifyParty</h1>
     <br>
-    <p>Join a party:</p>
+    <h2>Join a party</h2>
     <form action="" method="post">
         {% csrf_token %}
-        <p><input type="text", name="session_code"></p>
-        <p><input type="submit"></p>
+        <p><input id="input-code" type="text", name="session_code"></p>
+        <p><input id="join" value="join" type="submit"></p>
     </form>
     <p>{{ error_msg }}</p>
     <br>
-    <p>Or create your own Party:</p>
-    <p><a href="{% url 'login_spotify' %}">Create Party</a></p>
+    <h2>or create one</h2>
+    <p><a href="{% url 'login_spotify' %}"><button>create party</button></a></p>
 </body>
 </html>
