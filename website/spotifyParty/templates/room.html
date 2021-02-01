@@ -10,10 +10,16 @@
 </head>
 <body>
 <h1>Party Session</h1>
-<form id="form" method="post">
-    {% csrf_token %}
-    <input id="start_button" type="submit" value="Start Session">
-</form>
+<div id="pre_start_elements">
+    {% if user_is_host %}
+        <form id="form" method="post">
+            {% csrf_token %}
+            <input id="start_button" type="submit" value="Start Session">
+        </form>
+    {% else %}
+        <p>Waiting for Host to start the Party</p>
+    {% endif %}
+</div>
 
 <p id="timer"></p>
 
@@ -29,7 +35,7 @@ console.log(window.location);
 // vars for appending selected songs
 let playing_song_card = document.getElementById("playing_song");
 let votable_song_card = document.getElementById("votable_songs");
-let start_btn = document.getElementById("start_button");
+let pre_start_elements = document.getElementById("pre_start_elements");
 // var section for button
 let loc = window.location;
 let formData = document.getElementById("form");
@@ -52,6 +58,7 @@ socket.onmessage = function(e) {
     let message = JSON.parse(e.data);
     let message_text = message.text;
 
+    console.log(message)
     console.log(message_text)
 
     if(message_text["type"]=="session_init" || message_text["type"]=='user_session_init'){
@@ -78,7 +85,7 @@ socket.onmessage = function(e) {
 
 // fills placeholder cards with data from JSON-Object
 function fillCards(message_text){
-        start_btn.style.display = "None";
+        pre_start_elements.style.display = "None";
         // get data from json object
         let playing_song = message_text['playing_song'];
         let votable_songs = message_text['votable_songs'];
@@ -186,13 +193,13 @@ function moveProgress(playbackStarted, songDuration) {
 socket.onopen = function(e)
 {
     console.log("open", e);
-     <!-- Sending Data of type timer -->
-    formData.addEventListener("submit", function (event)
-    {
-        event.preventDefault();
-         <!-- Triggering new countdown -->
-        socket.send("start_party_session")
-    });
+
+    if(formData){
+        formData.addEventListener("submit", function (event){
+            event.preventDefault();
+            socket.send("start_party_session")
+        });
+    }
 }
 
 socket.onerror = function(e)

@@ -78,26 +78,41 @@ def settings(request):
             'device_name': device.device_name
         })
 
-    error_msg = ''
+    error_msg1 = ''
+    error_msg2 = ''
     if not user_playlists.exists():
-        error_msg = 'Please make sure your playlist is set to public and contains at least 5 songs!'
+        error_msg1 = 'Please make sure your playlist is set to public and contains at least 5 songs!'
     if not user_devices.exists():
-        error_msg = 'Please make sure your playback device is active and accessible!'
-    return render(request, 'settings.html', {'error_msg': error_msg, 'playlists': playlists, 'devices': devices})
+        error_msg2 = 'Please make sure your playback device is active and accessible!'
+    return render(request, 'settings.html', {'error_msg1': error_msg1,
+                                             'error_msg2': error_msg2,
+                                             'playlists': playlists,
+                                             'devices': devices})
 
 
 # delivers connection to websocket
 def party_session(request, room_name):
-    valid_session_code = PartySession.objects.filter(session_code=room_name)
-    if valid_session_code:
+    valid_session = PartySession.objects.filter(session_code=room_name)
+    if valid_session.exists():
+        valid_session = valid_session[0]
         if not request.user.is_authenticated:
             new_user = User.objects.create_user()
             new_user.save()
             login(request, new_user)
 
+        user_joined_session = UserJoinedPartySession.objects.filter(user=request.user, party_session=valid_session)
+        if not user_joined_session.exists():
+            new_user_joined_party_session = UserJoinedPartySession(user=request.user, party_session=valid_session)
+            new_user_joined_party_session.save()
+            user_is_host = new_user_joined_party_session.is_session_host
+        else:
+            user_joined_session = user_joined_session[0]
+            user_is_host = user_joined_session.is_session_host
+
         # connects to websocket if matching session exists
         return render(request, 'room.html', {
-            'room_name': room_name
+            'room_name': room_name,
+            'user_is_host': user_is_host
         })
     else:
         # redirects back to index if no matching session exists

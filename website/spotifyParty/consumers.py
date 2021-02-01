@@ -15,8 +15,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.room_group_name = 'mytest_%s' % self.room_name
         self.user_id = self.user.identifier
-        # create user_join_party_session object if not exists
-        await self.user_join_party_session(self.user, await self.get_current_party_session(self.room_name))
 
         print('Connected Session: ' + self.room_name)
         print('Connected User: ' + self.user_id)
@@ -202,9 +200,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         }))
 
     async def force_disconnect(self, event):
-        await self.send(json.dumps({
-            "type": "websocket.close"
-        }))
+        await self.close()
 
     # regular async functions
     async def set_votable_songs(self):
@@ -252,12 +248,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_user_join_party_session(self, user, session_code):
         return UserJoinedPartySession.objects.filter(user=user, party_session__session_code=session_code)[0]
-
-    @database_sync_to_async
-    def user_join_party_session(self, user, party_session):
-        if not UserJoinedPartySession.objects.filter(user=user, party_session=party_session):
-            new_user_joined_party_session = UserJoinedPartySession(user=user, party_session=party_session)
-            new_user_joined_party_session.save()
 
     @database_sync_to_async
     def get_current_party_session(self, current_session_code):
