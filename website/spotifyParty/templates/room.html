@@ -21,10 +21,7 @@
     {% endif %}
 </div>
 
-<p id="timer"></p>
-
 <div id="playing_song"></div>
-<br>
 <br>
 <div class="flexrow" id="votable_songs"></div>
 
@@ -39,10 +36,6 @@ let pre_start_elements = document.getElementById("pre_start_elements");
 // var section for button
 let loc = window.location;
 let formData = document.getElementById("form");
-
-// var section for timer
-let timer = document.getElementById("timer");
-    timer.style.display = "block";
 
 // Websocket routing
 let wsStart = 'ws://';
@@ -90,9 +83,6 @@ function fillCards(message_text){
         let playing_song = message_text['playing_song'];
         let votable_songs = message_text['votable_songs'];
 
-        // create html elements for now playing song from data
-        let pSong_headline = document.createElement("H5");
-
         let pSong_cover = document.createElement("IMG");
         pSong_cover.src = playing_song["cover_link"];
         pSong_cover.id = "song_cover";
@@ -106,11 +96,7 @@ function fillCards(message_text){
         let pSong_name = document.createElement("P");
         pSong_name.innerText = playing_song["title"] + " - " + playing_song["artist"];
 
-        let pSong_length = document.createElement("P");
-        <!-- pSong_length.innerText = "Length: " + playing_song["length"] + " ms."; -->
-
         // append html elements for now playing song to placeholder div
-        playing_song_card.appendChild(pSong_headline);
         playing_song_card.appendChild(pSong_cover);
         playing_song_card.appendChild(progress);
         playing_song_card.appendChild(pSong_name);
