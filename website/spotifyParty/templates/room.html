@@ -65,7 +65,7 @@ socket.onmessage = function(e) {
         // replace old vote count with new values
         for( let i=0; i<votable_songs.length; i++){
             let voteCounter = votable_song_cards[i].getElementsByClassName("vote_counter")[0]
-            voteCounter.innerText = "Votes: " + String(votable_songs[i]["votes"]);
+            voteCounter.innerText = String(votable_songs[i]["votes"]);
         }
     }
     // session is refreshed
@@ -111,22 +111,24 @@ function fillCards(message_text){
             votable_song_card.appendChild(vSongCard);
             let brEl = document.createElement("BR");
 
+            let imageBadge = document.createElement("DIV");
             let vSong_cover = document.createElement("IMG");
             vSong_cover.src = song["cover_link"];
-            vSong_cover.id = "song_cover";
+            vSong_cover.className = "song_cover";
+            let vSong_votes = document.createElement("SPAN");
+            vSong_votes.className = "vote_counter"
+            vSong_votes.innerText = String(song["votes"]);
             let vSong_name = document.createElement("SPAN");
             vSong_name.className = "songName";
             vSong_name.innerText = song["title"];
             let vSong_artist = document.createElement("SPAN");
             vSong_artist.className = "songArtist";
             vSong_artist.innerText = song["artist"];
-            let vSong_votes = document.createElement("P");
-            vSong_votes.className = "vote_counter"
-            vSong_votes.innerText = "Votes: " + String(song["votes"]);
 
             // append html elements to div
-            vSongCard.appendChild(vSong_cover);
-            vSongCard.appendChild(vSong_votes);
+            imageBadge.appendChild(vSong_cover);
+            imageBadge.appendChild(vSong_votes);
+            vSongCard.appendChild(imageBadge);
             vSongCard.appendChild(vSong_name);
             marqueeOverflow(vSongCard, vSong_name, song["title"], "songName");
             vSongCard.appendChild(brEl);

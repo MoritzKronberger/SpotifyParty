@@ -50,8 +50,8 @@
         background-color: #222222;
     }
 
-    .votable_song > img {
-        width: 100%;
+    .song_cover {
+          width: 100%;
     }
 
     .votable_song > h3 {
@@ -92,7 +92,13 @@
     }
 
     .vote_counter {
+        position: relative;
+        bottom: 10%;
+        right: 25%;
+        padding: 5px 9px;
+        border-radius: 50%;
         background-color: #FFAF60;
+        color: white;
         margin-bottom: 0px;
     }
 
@@ -174,7 +180,7 @@
         background-color: #222222;
     }
 
-    .votable_song > img {
+    .song_cover {
           width: 100%;
     }
 
@@ -215,7 +221,13 @@
     }
 
     .vote_counter {
+        position: relative;
+        bottom: 10%;
+        right: 20%;
+        padding: 5px 19px;
+        border-radius: 50%;
         background-color: #FFAF60;
+        color: white;
         margin-bottom: 0px;
     }
 
