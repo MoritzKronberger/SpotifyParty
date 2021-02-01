@@ -102,20 +102,23 @@ function fillCards(message_text){
         playing_song_card.appendChild(pSong_name);
         playing_song_card.appendChild(pSong_length);
 
-        let brEl = document.createElement("BR");
-
         // for each votable song in the dataset create div with html elements and EventListener
         votable_songs.forEach(function(song){
             let vSongCard = document.createElement("DIV");
             vSongCard.className = "votable_song";
             vSongCard.id = song["song_id"];
 
+            votable_song_card.appendChild(vSongCard);
+            let brEl = document.createElement("BR");
+
             let vSong_cover = document.createElement("IMG");
             vSong_cover.src = song["cover_link"];
             vSong_cover.id = "song_cover";
-            let vSong_name = document.createElement("H3");
+            let vSong_name = document.createElement("SPAN");
+            vSong_name.className = "songName";
             vSong_name.innerText = song["title"];
-            let vSong_artist = document.createElement("P");
+            let vSong_artist = document.createElement("SPAN");
+            vSong_artist.className = "songArtist";
             vSong_artist.innerText = song["artist"];
             let vSong_votes = document.createElement("P");
             vSong_votes.className = "vote_counter"
@@ -125,18 +128,29 @@ function fillCards(message_text){
             vSongCard.appendChild(vSong_cover);
             vSongCard.appendChild(vSong_votes);
             vSongCard.appendChild(vSong_name);
+            marqueeOverflow(vSongCard, vSong_name, song["title"], "songName");
+            vSongCard.appendChild(brEl);
             vSongCard.appendChild(vSong_artist);
+            marqueeOverflow(vSongCard, vSong_artist, song["artist"], "songArtist");
             // add EventListener to send clicked song-id over websocket as vote
             vSongCard.addEventListener('click', function(event){
                 event.preventDefault();
                 socket.send(String(vSongCard.id))
             });
-
-            // append divs to placeholder div
-            votable_song_card.appendChild(vSongCard);
-            votable_song_card.appendChild(brEl);
         });
 }
+
+function marqueeOverflow(parentNode, element, text, className){
+            if(element.getBoundingClientRect().width > parentNode.clientWidth){
+                let secondSpan = document.createElement("SPAN");
+                secondSpan.innerText = text;
+                secondSpan.className = className;
+                parentNode.appendChild(secondSpan);
+                parentNode.querySelectorAll('.' + className).forEach(function (el) {
+                    el.className = className + ' marquee'
+                })
+            }
+        }
 
 // Sending Data to Python
 socket.onopen = function(e)

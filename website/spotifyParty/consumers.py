@@ -201,7 +201,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     # regular async functions
     async def set_votable_songs(self):
-        for i in range(10):
+        for i in range(4):
             not_played_songs = await self.get_not_played_songs(self.room_name)
             random_song = random.choice(not_played_songs)
             random_song.is_votable = True
