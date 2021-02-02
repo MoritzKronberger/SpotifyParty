@@ -10,6 +10,15 @@
         align-items: center;
     }
 
+   #waiting{
+        color: #FFAF60;
+        font-size: 100%;
+        font-weight: bold;
+        margin-bottom: 5px;
+        margin-left: 5%;
+        margin-right: 5%;
+    }
+
     #playing_song {
         margin-top: 10%;
         display: flex;
@@ -62,14 +71,14 @@
     .songName {
         color: white;
         font-size: 17px;
-        margin-top: 0px;
-        margin-bottom: 0px;
-        padding-top: 0px;
+        margin-top: 0;
+        margin-bottom: 0;
+        padding-top: 0;
     }
 
     .songArtist {
-        margin-top: 0px;
-        padding-top: 0px;
+        margin-top: 0;
+        padding-top: 0;
         color: darkgray;
         font-size: 12px;
         font-weight: bold;

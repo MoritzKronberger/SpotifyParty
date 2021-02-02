@@ -26,21 +26,21 @@
     font-size: 20px;
     font-weight: bold;
     margin-top: 2%;
-    margin-bottom: 0%;
+    margin-bottom: 0;
 }
 
 @media (min-width: 600px) {
     #input-code {
         width: 20%;
         height: 40px;
-        margin-top: 0%;
+        margin-top: 0;
     }
 
     #join, button {
         width: 20%;
         height: 40px;
-        margin-top: 0%;
-        margin-bottom: 0%;
+        margin-top: 0;
+        margin-bottom: 0;
     }
 
     #join:hover, button:hover {

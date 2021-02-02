@@ -9,11 +9,11 @@ import time
 from .views import create_spotify_oauth
 
 
-class ChatConsumer(AsyncWebsocketConsumer):
+class SessionConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.user = self.scope["user"]
         self.room_name = self.scope['url_route']['kwargs']['room_name']
-        self.room_group_name = 'mytest_%s' % self.room_name
+        self.room_group_name = 'partySession_%s' % self.room_name
         self.user_id = self.user.identifier
 
         print('Connected Session: ' + self.room_name)
@@ -31,19 +31,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if current_session.is_initialized:
             asyncio.create_task(self.collect_session_data('user_session_init'))
 
-    # differentiate client messages here
+    # differentiates client messages
     async def receive(self, text_data):
         received_data = text_data
         current_session = await self.get_current_party_session(self.room_name)
         # check if message is a session_init and if the messaging user is the session-host
-        if str(received_data) == 'start_party_session' and await self.user_is_session_host(self.user,
-                                                                                           self.room_name):
-            playing_song = await self.get_first_song(self.room_name)
-            playing_song.is_playing = True
-            await database_sync_to_async(playing_song.save)()
-            await self.set_votable_songs()
+        if str(received_data) == 'start_party_session':
+            if await self.user_is_session_host(self.user, self.room_name):
+                playing_song = await self.get_first_song(self.room_name)
+                playing_song.is_playing = True
+                await database_sync_to_async(playing_song.save)()
+                await self.set_votable_songs()
 
-            asyncio.create_task(self.collect_session_data('session_init'))
+                asyncio.create_task(self.collect_session_data('session_init'))
 
         # all strings other than 'start_party_session' are treated as potential spotify-song-ids
         # only start voting task if voting is currently allowed
@@ -55,7 +55,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         playing_song = await self.get_playing_song_dict(await self.get_playing_song(self.room_name))
         votable_songs = await self.get_votable_songs_dict(await self.get_votable_songs(self.room_name))
 
-        # create JSON-like dictionary with data from above
+        # create dictionary with data from above
         collected_data = {
             "type": message_type,
             "playing_song": playing_song,
@@ -97,6 +97,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # collect votes after song playback is finished
         asyncio.create_task(self.collect_votes_task())
 
+    # initialize session for single user
     async def send_to_single_user_task(self, received_data):
         init_data = received_data
         await self.send(json.dumps({
@@ -108,7 +109,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         new_vote = str(received_data)
         # all possible strings are passed to the UserJoinedPartySession change_vote method
         user_joined_session = await self.get_user_join_party_session(self.user, self.room_name)
-        # if vote was valid: refresh votes
+        # if vote was valid: refresh votes for whole session
         if await database_sync_to_async(user_joined_session.change_vote)(new_vote):
             asyncio.create_task(self.refresh_votes_task())
 
@@ -148,7 +149,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         # if host disconnects:
         # close websocket for all users in session, delete partySession instance cascade
-        # and stop Consumer
         if await self.get_current_party_session(self.room_name) and await self.user_is_session_host(self.user,
                                                                                                     self.room_name):
             print('Disconnected Host-User: ' + self.user_id)
@@ -176,6 +176,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 # delete user-party_session-relationship
                 await database_sync_to_async(UserJoinedPartySession.objects.filter(
                     user=self.user, party_session__session_code=self.room_name).delete)()
+                # deleting relationship-object might reduce vote-count:
                 # refresh votes
                 asyncio.create_task(self.refresh_votes_task())
             print("Disconnected User: " + self.user_id)
@@ -308,7 +309,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_most_voted_song(self, votable_songs):
-        # in case of drawn vote_count with 0 votes:
+        # in case of drawn vote_count:
         # set first song as song with most votes
         most_voted_song = votable_songs[0]
         most_votes = 0

@@ -10,6 +10,23 @@
         margin-top: 15%;
     }
 
+    .label{
+        color: #FFAF60;
+        font-size: 190%;
+        margin-bottom: 5px;
+        margin-left: 5%;
+        margin-right: 5%;
+    }
+
+    .error_msg {
+        color: white;
+        font-size: 80%;
+        font-weight: bold;
+        margin-bottom: 5px;
+        margin-left: 5%;
+        margin-right: 5%;
+    }
+
     .select-playlist {
         margin-top: 5%;
     }

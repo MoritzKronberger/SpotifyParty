@@ -15,10 +15,10 @@
     <h2>Join a party</h2>
     <form action="" method="post">
         {% csrf_token %}
-        <p><input id="input-code" type="text", name="session_code"></p>
+        <p><input id="input-code" type="text" name="session_code"></p>
         <p><input id="join" value="join" type="submit"></p>
     </form>
-    <p>{{ error_msg }}</p>
+    <br>
     <br>
     <h2>or create one</h2>
     <p><a href="{% url 'login_spotify' %}"><button>create party</button></a></p>

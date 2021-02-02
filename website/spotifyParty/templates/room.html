@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Shared Playlist</title>
-     {% load static %}
+    <title>SpotifyParty</title>
+    {% load static %}
     <link rel="stylesheet" href="{% static 'css/style_room.css' %}">
     <link rel="stylesheet" href="{% static 'css/main.css' %}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-<h1>Party Session</h1>
+<h1>SpotifyParty</h1>
 <div id="pre_start_elements">
     {% if user_is_host %}
         <form id="form" method="post">
@@ -17,7 +17,7 @@
             <input id="start_button" type="submit" value="Start Session">
         </form>
     {% else %}
-        <p>Waiting for Host to start the Party</p>
+        <p id="waiting">Waiting for Host to start the Party</p>
     {% endif %}
 </div>
 
@@ -26,181 +26,183 @@
 <div class="flexrow" id="votable_songs"></div>
 
 {% block script %}
-<script>
+    <script>
 
-console.log(window.location);
-// vars for appending selected songs
-let playing_song_card = document.getElementById("playing_song");
-let votable_song_card = document.getElementById("votable_songs");
-let pre_start_elements = document.getElementById("pre_start_elements");
-// var section for button
-let loc = window.location;
-let formData = document.getElementById("form");
+        console.log(window.location);
+        // vars for appending selected songs
+        let playing_song_card = document.getElementById("playing_song");
+        let votable_song_card = document.getElementById("votable_songs");
+        let pre_start_elements = document.getElementById("pre_start_elements");
+        // var section for button
+        let loc = window.location;
+        let formData = document.getElementById("form");
 
-// Websocket routing
-let wsStart = 'ws://';
-if(loc.protocol === 'https:') {
-    wsStart = 'wss://';
-}
-
-let endpoint = wsStart + loc.host + loc.pathname;//
-let socket = new WebSocket(endpoint);
-
-// Receiving Python Data
-socket.onmessage = function(e) {
-    let message = JSON.parse(e.data);
-    let message_text = message.text;
-
-    console.log(message)
-    console.log(message_text)
-
-    if(message_text["type"]=="session_init" || message_text["type"]=='user_session_init'){
-        fillCards(message_text);
-    }
-    // votes are refreshed
-    else if(message_text["type"]=="votes_refresh") {
-
-        let votable_songs = message_text["votable_songs"];
-        let votable_song_cards = document.getElementsByClassName('votable_song');
-        // replace old vote count with new values
-        for( let i=0; i<votable_songs.length; i++){
-            let voteCounter = votable_song_cards[i].getElementsByClassName("vote_counter")[0]
-            voteCounter.innerText = String(votable_songs[i]["votes"]);
+        // Websocket routing
+        let wsStart = 'ws://';
+        if (loc.protocol === 'https:') {
+            wsStart = 'wss://';
         }
-    }
-    // session is refreshed
-    else if(message_text["type"]=="session_refresh") {
-        playing_song_card.innerHTML = '';
-        votable_song_card.innerHTML = '';
-        fillCards(message_text);
-    }
-}
 
-// fills placeholder cards with data from JSON-Object
-function fillCards(message_text){
-        pre_start_elements.style.display = "None";
-        // get data from json object
-        let playing_song = message_text['playing_song'];
-        let votable_songs = message_text['votable_songs'];
+        let endpoint = wsStart + loc.host + loc.pathname;//
+        let socket = new WebSocket(endpoint);
 
-        let pSong_cover = document.createElement("IMG");
-        pSong_cover.src = playing_song["cover_link"];
-        pSong_cover.id = "song_cover";
+        // Receiving Websocket Data
+        socket.onmessage = function (e) {
+            let message = JSON.parse(e.data);
+            let message_text = message.text;
 
-        let progress = document.createElement("DIV");
-        progress.id = "progress";
-        let progressBar = document.createElement("DIV");
-        progressBar.id = "progressBar";
-        progress.appendChild(progressBar);
+            console.log(message)
 
-        let pSong_name = document.createElement("P");
-        pSong_name.innerText = playing_song["title"] + " - " + playing_song["artist"];
+            // session is initialized
+            if (message_text["type"] == "session_init" || message_text["type"] == 'user_session_init') {
+                fillCards(message_text);
+            }
+            // votes are refreshed
+            else if (message_text["type"] == "votes_refresh") {
 
-        // append html elements for now playing song to placeholder div
-        playing_song_card.appendChild(pSong_cover);
-        playing_song_card.appendChild(progress);
-        playing_song_card.appendChild(pSong_name);
+                let votable_songs = message_text["votable_songs"];
+                let votable_song_cards = document.getElementsByClassName('votable_song');
+                // replace old vote count with new values
+                for (let i = 0; i < votable_songs.length; i++) {
+                    let voteCounter = votable_song_cards[i].getElementsByClassName("vote_counter")[0]
+                    voteCounter.innerText = String(votable_songs[i]["votes"]);
+                }
+            }
+            // session is refreshed
+            else if (message_text["type"] == "session_refresh") {
+                playing_song_card.innerHTML = '';
+                votable_song_card.innerHTML = '';
+                fillCards(message_text);
+            }
+        }
 
-        moveProgress(message_text['playback_started']*1000, playing_song["length"]);
+        // fill placeholder cards with data from JSON-Object
+        function fillCards(message_text) {
+            pre_start_elements.style.display = "None";
+            // get data from json object
+            let playing_song = message_text['playing_song'];
+            let votable_songs = message_text['votable_songs'];
 
-        // for each votable song in the dataset create div with html elements and EventListener
-        votable_songs.forEach(function(song){
-            let vSongCard = document.createElement("DIV");
-            vSongCard.className = "votable_song";
-            vSongCard.id = song["song_id"];
+            let pSong_cover = document.createElement("IMG");
+            pSong_cover.src = playing_song["cover_link"];
+            pSong_cover.id = "song_cover";
 
-            votable_song_card.appendChild(vSongCard);
-            let brEl = document.createElement("BR");
+            let progress = document.createElement("DIV");
+            progress.id = "progress";
+            let progressBar = document.createElement("DIV");
+            progressBar.id = "progressBar";
+            progress.appendChild(progressBar);
 
-            let imageBadge = document.createElement("DIV");
-            let vSong_cover = document.createElement("IMG");
-            vSong_cover.src = song["cover_link"];
-            vSong_cover.className = "song_cover";
-            let vSong_votes = document.createElement("SPAN");
-            vSong_votes.className = "vote_counter"
-            vSong_votes.innerText = String(song["votes"]);
-            let vSong_name = document.createElement("SPAN");
-            vSong_name.className = "songName";
-            vSong_name.innerText = song["title"];
-            let vSong_artist = document.createElement("SPAN");
-            vSong_artist.className = "songArtist";
-            vSong_artist.innerText = song["artist"];
+            let pSong_name = document.createElement("P");
+            pSong_name.innerText = playing_song["title"] + " - " + playing_song["artist"];
 
-            // append html elements to div
-            imageBadge.appendChild(vSong_cover);
-            imageBadge.appendChild(vSong_votes);
-            vSongCard.appendChild(imageBadge);
-            vSongCard.appendChild(vSong_name);
-            marqueeOverflow(vSongCard, vSong_name, song["title"], "songName");
-            vSongCard.appendChild(brEl);
-            vSongCard.appendChild(vSong_artist);
-            marqueeOverflow(vSongCard, vSong_artist, song["artist"], "songArtist");
-            // add EventListener to send clicked song-id over websocket as vote
-            vSongCard.addEventListener('click', function(event){
-                event.preventDefault();
-                socket.send(String(vSongCard.id))
+            // append html elements for now playing song to placeholder div
+            playing_song_card.appendChild(pSong_cover);
+            playing_song_card.appendChild(progress);
+            playing_song_card.appendChild(pSong_name);
+
+            moveProgress(message_text['playback_started'] * 1000, playing_song["length"]);
+
+            // for each votable song in the dataset create div with html elements and EventListener
+            votable_songs.forEach(function (song) {
+                let vSongCard = document.createElement("DIV");
+                vSongCard.className = "votable_song";
+                vSongCard.id = song["song_id"];
+
+                votable_song_card.appendChild(vSongCard);
+                let brEl = document.createElement("BR");
+
+                let imageBadge = document.createElement("DIV");
+                let vSong_cover = document.createElement("IMG");
+                vSong_cover.src = song["cover_link"];
+                vSong_cover.className = "song_cover";
+                let vSong_votes = document.createElement("SPAN");
+                vSong_votes.className = "vote_counter"
+                vSong_votes.innerText = String(song["votes"]);
+                let vSong_name = document.createElement("SPAN");
+                vSong_name.className = "songName";
+                vSong_name.innerText = song["title"];
+                let vSong_artist = document.createElement("SPAN");
+                vSong_artist.className = "songArtist";
+                vSong_artist.innerText = song["artist"];
+
+                // append html elements to div
+                imageBadge.appendChild(vSong_cover);
+                imageBadge.appendChild(vSong_votes);
+                vSongCard.appendChild(imageBadge);
+                vSongCard.appendChild(vSong_name);
+                // add marquee effect if element causes overflow
+                marqueeOverflow(vSongCard, vSong_name, song["title"], "songName");
+                vSongCard.appendChild(brEl);
+                vSongCard.appendChild(vSong_artist);
+                // add marquee effect if element causes overflow
+                marqueeOverflow(vSongCard, vSong_artist, song["artist"], "songArtist");
+                // add EventListener to send clicked song-id over websocket as vote
+                vSongCard.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    socket.send(String(vSongCard.id))
+                });
             });
-        });
-}
-
-function marqueeOverflow(parentNode, element, text, className){
-    if(element.getBoundingClientRect().width > parentNode.clientWidth){
-        let secondSpan = document.createElement("SPAN");
-        secondSpan.innerText = text;
-        secondSpan.className = className;
-        parentNode.appendChild(secondSpan);
-        parentNode.querySelectorAll('.' + className).forEach(function (el) {
-            el.className = className + ' marquee'
-        })
-    }
-}
-
-function moveProgress(playbackStarted, songDuration) {
-    let bar = document.getElementById("progressBar");
-    let id = setInterval(frame, 10);
-
-    function frame() {
-        let currentTimestamp = Date.now();
-        let remainingPlayback = currentTimestamp - playbackStarted;
-        let progressPercent = remainingPlayback / songDuration;
-
-        if (progressPercent >= 1) {
-            let barWidth = 100;
-            bar.style.width = barWidth + "%";
-            clearInterval(id);
-        } else {
-            let barWidth = 100 * progressPercent;
-            bar.style.width = barWidth + "%";
         }
-    }
-}
 
-// Sending Data to Python
-socket.onopen = function(e)
-{
-    console.log("open", e);
+        // add marquee effect
+        function marqueeOverflow(parentNode, element, text, className) {
+            // if element causes overflow
+            if (element.getBoundingClientRect().width > parentNode.clientWidth) {
+                // create second span for continuous marquee
+                let secondSpan = document.createElement("SPAN");
+                secondSpan.innerText = text;
+                secondSpan.className = className;
+                parentNode.appendChild(secondSpan);
+                parentNode.querySelectorAll('.' + className).forEach(function (el) {
+                    el.className = className + ' marquee'
+                })
+            }
+        }
 
-    if(formData){
-        formData.addEventListener("submit", function (event){
-            event.preventDefault();
-            socket.send("start_party_session")
-        });
-    }
-}
+        // move progress bar every 10 ms
+        function moveProgress(playbackStarted, songDuration) {
+            let bar = document.getElementById("progressBar");
+            let id = setInterval(frame, 10);
 
-socket.onerror = function(e)
-{
-    console.log("error", e);
-}
+            function frame() {
+                let currentTimestamp = Date.now();
+                let remainingPlayback = currentTimestamp - playbackStarted;
+                let progressPercent = remainingPlayback / songDuration;
 
-socket.onclose = function(e)
-{
-    console.log("close", e);
-    // try redirecting back to index page
-    window.location.replace("http://127.0.0.1:8000");
-}
+                if (progressPercent >= 1) {
+                    let barWidth = 100;
+                    bar.style.width = barWidth + "%";
+                    clearInterval(id);
+                } else {
+                    let barWidth = 100 * progressPercent;
+                    bar.style.width = barWidth + "%";
+                }
+            }
+        }
 
-</script>
+        // send data over websocket
+        socket.onopen = function (e) {
+
+            if (formData) {
+                formData.addEventListener("submit", function (event) {
+                    event.preventDefault();
+                    socket.send("start_party_session")
+                });
+            }
+        }
+
+        socket.onerror = function (e) {
+            console.log("error", e);
+        }
+
+        // execute on websocket close
+        socket.onclose = function (e) {
+            // try redirecting back to index page
+            window.location.replace("http://127.0.0.1:8000");
+        }
+
+    </script>
 {% endblock %}
 </body>
 </html>

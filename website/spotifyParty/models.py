@@ -80,9 +80,10 @@ class UserJoinedPartySession(models.Model):
 
 
 @receiver(pre_delete, sender=UserJoinedPartySession)
-def remove_vote_on_user_leave_party_session(sender, instance, **kwargs):
+def remove_vote_on_user_leave_party_session(instance, **kwargs):
     if instance.user_vote:
-        song = Song.objects.filter(spotify_song_id=instance.user_vote.spotify_song_id, party_session=instance.party_session)[0]
+        song = Song.objects.filter(spotify_song_id=instance.user_vote.spotify_song_id,
+                                   party_session=instance.party_session)[0]
         song.song_votes = song.song_votes - 1
         song.save()
 
