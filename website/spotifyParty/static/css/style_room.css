@@ -8,16 +8,15 @@
         font-size: 20px;
         font-weight: bold;
         align-items: center;
+        margin-top: 5%;
     }
 
    #waiting{
         color: #FFAF60;
         font-size: 100%;
         font-weight: bold;
-        margin-bottom: 5px;
-        margin-left: 5%;
-        margin-right: 5%;
-    }
+        margin: 13% 5% 5px;
+   }
 
     #playing_song {
         margin-top: 10%;
@@ -152,4 +151,11 @@
     #start_button:hover {
         background-color: #FFBD7D;
     }
+
+    #waiting{
+        color: #FFAF60;
+        font-size: 100%;
+        font-weight: bold;
+        margin: 5% 5% 5px;
+   }
 }

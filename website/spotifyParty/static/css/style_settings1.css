@@ -50,6 +50,7 @@
     input {
         width: 200px;
         height: 45px;
+        margin-top: 2%;
     }
 
     .select-playlist {
