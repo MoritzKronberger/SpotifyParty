@@ -67,7 +67,7 @@
                     votable_song_cards[i].classList.remove('song_selected');
                     let voteCounter = votable_song_cards[i].getElementsByClassName("vote_counter")[0]
                     voteCounter.innerText = String(votable_songs[i]["votes"]);
-                    if(selected_song == votable_song_cards[i].id){
+                    if (selected_song == votable_song_cards[i].id) {
                         votable_song_cards[i].classList.add('song_selected');
                     }
                 }
@@ -146,10 +146,10 @@
                 vSongCard.addEventListener('click', function (event) {
                     event.preventDefault();
                     socket.send(String(vSongCard.id))
-                    if(selected_song != vSongCard.id){
+                    if (selected_song != vSongCard.id) {
                         selected_song = vSongCard.id;
-                    }else{
-                        selected_song=null;
+                    } else {
+                        selected_song = null;
                     }
                 });
             });

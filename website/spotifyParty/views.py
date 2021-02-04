@@ -115,7 +115,8 @@ def party_session(request, room_name):
 
         # connects to websocket if matching session exists
         # delivers different html based on user-role
-        host_joined_session = UserJoinedPartySession.objects.filter(party_session=valid_session, is_session_host=True)[0]
+        host_joined_session = UserJoinedPartySession.objects.filter(party_session=valid_session, is_session_host=True)[
+            0]
         active_playlist = UserPlaylist.objects.filter(is_selected=True, user=host_joined_session.user)[0]
         print(active_playlist)
         return render(request, 'room.html', {
@@ -138,6 +139,7 @@ def create_session_code():
         create_session_code()
     else:
         return random_session_code
+
 
 # ------------------- spotify api functions ------------------------------
 

@@ -130,7 +130,7 @@ class SessionConsumer(AsyncWebsocketConsumer):
     async def collect_votes_task(self):
         playing_song = await self.get_playing_song(self.room_name)
         wait_time = playing_song.song_length
-        await asyncio.sleep(wait_time/1000)
+        await asyncio.sleep(wait_time / 1000)
 
         # skips task if host has already disconnected
         if await self.get_current_party_session(self.room_name):

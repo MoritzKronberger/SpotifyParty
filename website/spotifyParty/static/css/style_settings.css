@@ -1,51 +1,51 @@
-    input {
-        background-color: #FFAF60;
-        border-radius: 5px;
-        width: 40%;
-        height: 45px;
-        color: #2B2B2B;
-        border-style: none;
-        font-size: 130%;
-        font-weight: bold;
-        margin-top: 15%;
-    }
+input {
+    background-color: #FFAF60;
+    border-radius: 5px;
+    width: 40%;
+    height: 45px;
+    color: #2B2B2B;
+    border-style: none;
+    font-size: 130%;
+    font-weight: bold;
+    margin-top: 15%;
+}
 
-    .label{
-        color: #FFAF60;
-        font-size: 190%;
-        font-weight: bold;
-        margin-bottom: 5px;
-        margin-left: 5%;
-        margin-right: 5%;
-    }
+.label {
+    color: #FFAF60;
+    font-size: 190%;
+    font-weight: bold;
+    margin-bottom: 5px;
+    margin-left: 5%;
+    margin-right: 5%;
+}
 
-    .error_msg {
-        color: white;
-        font-size: 80%;
-        font-weight: bold;
-        margin-bottom: 5px;
-        margin-left: 5%;
-        margin-right: 5%;
-    }
+.error_msg {
+    color: white;
+    font-size: 80%;
+    font-weight: bold;
+    margin-bottom: 5px;
+    margin-left: 5%;
+    margin-right: 5%;
+}
 
-    .select-playlist {
-        margin-top: 5%;
-    }
+.select-playlist {
+    margin-top: 5%;
+}
 
-    .select-device {
-        margin-top: 5%;
-    }
+.select-device {
+    margin-top: 5%;
+}
 
-    option {
-        width: 100px;
-        height: 40px;
-        padding-left: 10px;
-        outline: none;
-        border: none;
-        background-color: #2B2B2B;;
-        font-weight: bold;
-        color: white;
-    }
+option {
+    width: 100px;
+    height: 40px;
+    padding-left: 10px;
+    outline: none;
+    border: none;
+    background-color: #2B2B2B;;
+    font-weight: bold;
+    color: white;
+}
 
 @media (min-width: 600px) {
     input {
