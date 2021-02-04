@@ -28,12 +28,22 @@ input {
     margin-right: 5%;
 }
 
+select {
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    height: 35px;
+    background-color: #202020;
+    color: white;
+}
+
 .select-playlist {
     margin-top: 5%;
 }
 
 .select-device {
     margin-top: 5%;
+    background-color: #2B2B2B;
 }
 
 option {
@@ -42,7 +52,7 @@ option {
     padding-left: 10px;
     outline: none;
     border: none;
-    background-color: #2B2B2B;;
+    background-color: #202020;
     font-weight: bold;
     color: white;
 }

@@ -23,7 +23,9 @@ def index(request):
 def settings(request):
     # if user is not logged in or no api-token exists redirect to login
     if not request.user.is_authenticated or not get_user_token(request.user):
-        HttpResponseRedirect(reverse('login_spotify'))
+        print('tried redirecting')
+        return HttpResponseRedirect(reverse('login_spotify'))
+
 
     if request.method == 'POST':
         # get selected device and playlist
@@ -215,6 +217,7 @@ def fetch_devices_from_spotify(user):
 # get user token either from database or spotify api
 def get_user_token(user):
     user_tokens = ApiToken.objects.filter(user=user)
+    print(user_tokens.exists())
     if user_tokens.exists():
         user_token = user_tokens[0]
         access_token = user_token.access_token
