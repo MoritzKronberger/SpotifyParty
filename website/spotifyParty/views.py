@@ -23,9 +23,7 @@ def index(request):
 def settings(request):
     # if user is not logged in or no api-token exists redirect to login
     if not request.user.is_authenticated or not get_user_token(request.user):
-        print('tried redirecting')
         return HttpResponseRedirect(reverse('login_spotify'))
-
 
     if request.method == 'POST':
         # get selected device and playlist
@@ -120,7 +118,6 @@ def party_session(request, room_name):
         host_joined_session = UserJoinedPartySession.objects.filter(party_session=valid_session, is_session_host=True)[
             0]
         active_playlist = UserPlaylist.objects.filter(is_selected=True, user=host_joined_session.user)[0]
-        print(active_playlist)
         return render(request, 'room.html', {
             'room_name': room_name,
             'user_is_host': user_is_host,
@@ -217,7 +214,6 @@ def fetch_devices_from_spotify(user):
 # get user token either from database or spotify api
 def get_user_token(user):
     user_tokens = ApiToken.objects.filter(user=user)
-    print(user_tokens.exists())
     if user_tokens.exists():
         user_token = user_tokens[0]
         access_token = user_token.access_token
