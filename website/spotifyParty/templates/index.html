@@ -12,15 +12,15 @@
 <body>
     <h1>Welcome to SpotifyParty</h1>
     <br>
-    <h2>Join a party</h2>
+    <h2>Join a Party</h2>
     <form action="" method="post">
         {% csrf_token %}
         <p><input id="input-code" type="text" name="session_code"></p>
-        <p><input id="join" value="join" type="submit"></p>
+        <p><input id="join" value="Join" type="submit"></p>
     </form>
     <br>
     <br>
     <h2>or create one</h2>
-    <p><a href="{% url 'login_spotify' %}"><button>create party</button></a></p>
+    <p><a href="{% url 'login_spotify' %}"><button>Create Party</button></a></p>
 </body>
 </html>

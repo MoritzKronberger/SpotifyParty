@@ -53,6 +53,16 @@
         width: 30%;
     }
 
+    #playlist_cover{
+        width:30%;
+        margin: 1em;
+    }
+
+    #playlist_name{
+        color: white;
+        font-size: 18px;
+    }
+
     .votable_song {
         width: 30%;
         white-space: nowrap;
@@ -90,8 +100,21 @@
         margin: 0;
         padding: 5px 9px;
         border-radius: 50%;
+        border-style: solid;
+        border-width: 1px;
+        border-color: white;
         background-color: #FFAF60;
         color: white;
+    }
+
+    .song_selected img {
+        opacity: 0.5;
+    }
+
+    .song_selected .border_div {
+        border-style: solid;
+        border-width: 2px;
+        border-color: white;
     }
 
     .marquee {

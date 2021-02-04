@@ -11,6 +11,8 @@
 <body>
 <h1>SpotifyParty</h1>
 <div id="pre_start_elements">
+    <img id="playlist_cover" src="{{ active_playlist.playlist_cover_link }}" alt="playlist_cover">
+    <p id="playlist_name">{{ active_playlist.playlist_name }}</p>
     {% if user_is_host %}
         <form id="form" method="post">
             {% csrf_token %}
@@ -28,8 +30,9 @@
 {% block script %}
     <script>
 
-        console.log(window.location);
         // vars for appending selected songs
+
+        let selected_song = null;
         let playing_song_card = document.getElementById("playing_song");
         let votable_song_card = document.getElementById("votable_songs");
         let pre_start_elements = document.getElementById("pre_start_elements");
@@ -51,21 +54,22 @@
             let message = JSON.parse(e.data);
             let message_text = message.text;
 
-            console.log(message)
-
             // session is initialized
             if (message_text["type"] == "session_init" || message_text["type"] == 'user_session_init') {
                 fillCards(message_text);
             }
             // votes are refreshed
             else if (message_text["type"] == "votes_refresh") {
-
                 let votable_songs = message_text["votable_songs"];
                 let votable_song_cards = document.getElementsByClassName('votable_song');
                 // replace old vote count with new values
                 for (let i = 0; i < votable_songs.length; i++) {
+                    votable_song_cards[i].classList.remove('song_selected');
                     let voteCounter = votable_song_cards[i].getElementsByClassName("vote_counter")[0]
                     voteCounter.innerText = String(votable_songs[i]["votes"]);
+                    if(selected_song == votable_song_cards[i].id){
+                        votable_song_cards[i].classList.add('song_selected');
+                    }
                 }
             }
             // session is refreshed
@@ -112,7 +116,8 @@
                 votable_song_card.appendChild(vSongCard);
                 let brEl = document.createElement("BR");
 
-                let imageBadge = document.createElement("DIV");
+                let borderDiv = document.createElement("DIV");
+                borderDiv.className = 'border_div';
                 let vSong_cover = document.createElement("IMG");
                 vSong_cover.src = song["cover_link"];
                 vSong_cover.className = "song_cover";
@@ -127,9 +132,9 @@
                 vSong_artist.innerText = song["artist"];
 
                 // append html elements to div
-                imageBadge.appendChild(vSong_cover);
-                imageBadge.appendChild(vSong_votes);
-                vSongCard.appendChild(imageBadge);
+                borderDiv.appendChild(vSong_cover);
+                borderDiv.appendChild(vSong_votes);
+                vSongCard.appendChild(borderDiv);
                 vSongCard.appendChild(vSong_name);
                 // add marquee effect if element causes overflow
                 marqueeOverflow(vSongCard, vSong_name, song["title"], "songName");
@@ -141,6 +146,11 @@
                 vSongCard.addEventListener('click', function (event) {
                     event.preventDefault();
                     socket.send(String(vSongCard.id))
+                    if(selected_song != vSongCard.id){
+                        selected_song = vSongCard.id;
+                    }else{
+                        selected_song=null;
+                    }
                 });
             });
         }
@@ -155,7 +165,7 @@
                 secondSpan.className = className;
                 parentNode.appendChild(secondSpan);
                 parentNode.querySelectorAll('.' + className).forEach(function (el) {
-                    el.className = className + ' marquee'
+                    el.classList.add('marquee');
                 })
             }
         }

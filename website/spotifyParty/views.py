@@ -115,9 +115,13 @@ def party_session(request, room_name):
 
         # connects to websocket if matching session exists
         # delivers different html based on user-role
+        host_joined_session = UserJoinedPartySession.objects.filter(party_session=valid_session, is_session_host=True)[0]
+        active_playlist = UserPlaylist.objects.filter(is_selected=True, user=host_joined_session.user)[0]
+        print(active_playlist)
         return render(request, 'room.html', {
             'room_name': room_name,
-            'user_is_host': user_is_host
+            'user_is_host': user_is_host,
+            'active_playlist': active_playlist
         })
     else:
         # redirects back to index if no matching session exists
