@@ -43,9 +43,7 @@
         // Websocket routing
         let wsStart = 'ws://';
         if (loc.protocol === 'https:') {
-            wsStart = 'wss://';
-        }
-
+            wsStart = 'wss://'; }
         let endpoint = wsStart + loc.host + loc.pathname;//
         let socket = new WebSocket(endpoint);
 

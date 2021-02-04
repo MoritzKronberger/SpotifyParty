@@ -145,7 +145,6 @@ def create_session_code():
 
 # ------------------- spotify api functions ------------------------------
 
-
 # spotify user authentication
 def login_spotify(template):
     sp_auth = create_spotify_oauth()
@@ -210,7 +209,8 @@ def fetch_devices_from_spotify(user):
     for device in json_devices['devices']:
         # only save unrestricted devices
         if not device['is_restricted']:
-            new_device = PlaybackDevice(spotify_device_id=device['id'], device_name=device['name'], user=user)
+            new_device = PlaybackDevice(spotify_device_id=device['id'],
+                                        device_name=device['name'], user=user)
             new_device.save()
 
 

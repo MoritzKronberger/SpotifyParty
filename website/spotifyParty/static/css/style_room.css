@@ -54,7 +54,7 @@ img {
 }
 
 #playlist_cover {
-    width: 30%;
+    width:30%;
     margin: 1em;
 }
 
@@ -139,6 +139,11 @@ img {
         margin-top: 2%;
         margin-bottom: 3%;
     }
+
+    #playlist_cover {
+    width:15%;
+    margin: 1em;
+}
 
     img {
         width: 12%;
